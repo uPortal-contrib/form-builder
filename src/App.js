@@ -1,107 +1,57 @@
 import React, { Component } from 'react';
 import './App.css';
 import Form from "react-jsonschema-form";
-
-const schema = {
-    "$schema":"http://json-schema.org/draft-06/schema#",
-    "$id":"http://localhost:8090/communication-preferences.json",
-    "title":"Communication Preferences",
-    "description":"Please review your information that we have on file to make sure that our records are up-to-date.  Failure to provide current information can cause our self service not to work for you.",
-    "type":"object",
-    "properties":{
-        "contact_information":{
-            "$id":"/properties/contact_information",
-            "description":"Be aware that confidential information may be sent to the cell numbers and/or email address provided here.",
-            "type":"object",
-            "properties":{
-                "primary_cell_number":{
-                    "$id":"/properties/contact_information/primary_cell_number",
-                    "title":"Primary Cell Number",
-                    "type":"string",
-                    "pattern":"^\\d{3}-\\d{3}-\\d{4}$"
-                },
-                "secondary_cell_number":{
-                    "$id":"/properties/contact_information/secondary_cell_number",
-                    "title":"Secondary Cell Number",
-                    "description":"(This number can be used to keep parents informed.)",
-                    "type":"string",
-                    "pattern":"^\\d{3}-\\d{3}-\\d{4}$"
-                },
-                "email_address":{
-                    "$id":"/properties/contact_information/email_address",
-                    "title":"Email Address",
-                    "type":"string",
-                    "format":"email"
-                }
-            }
-        },
-        "channels":{
-            "$id":"/properties/channels",
-            "description":"The following messaging services are available for you to subscribe.  Some services are available at multiple campuses;  your primary campus will be selected by default.",
-            "type":"object",
-            "properties":{
-                "taco_truck":{
-                    "$id":"/properties/channels/taco_truck",
-                    "title":"Taco Truck",
-                    "description":"This service keeps you informed about where to find tacos on campus",
-                    "type":"object",
-                    "properties":{
-                        "receive":{
-                            "$id":"/properties/channels/taco_truck/receive",
-                            "type":"string",
-                            "enum":[
-                                "Yes",
-                                "No"
-                            ]
-                        },
-                        "locations":{
-                            "$id":"/properties/channels/taco_truck/locations",
-                            "type":"array",
-                            "items":{
-                                "type":"string",
-                                "enum":[
-                                    "Fresno City College",
-                                    "Clovis Community College",
-                                    "Reedley College"
-                                ]
-                            },
-                            "uniqueItems":true
-                        }
-                    }
-                }
-            }
-        },
-        "preserve_selections":{
-            "$id":"/properties/preserve_selections",
-            "description":"Preserve subscribed notifications when no longer taking classes.  Review the Subscription Policy for more details.",
-            "type":"boolean"
-        }
-    }
-};
-
-const uiSchema = {
-    "channels": {
-        "taco_truck": {
-            "receive": {
-                "ui:widget": "radio",
-                "ui:options": {
-                    "inline": true
-                }
-            },
-            "locations": {
-                "ui:widget": "checkboxes",
-                "ui:options": {
-                    "inline": true
-                }
-            }
-        }
-    }
-};
+import PropTypes from 'prop-types';
+import oidc from '@uportal/open-id-connect/src/open-id-connect';
 
 const log = (type) => console.log.bind(console, type);
 
 class App extends Component {
-    render() {
+    static propTypes = {
+        form: PropTypes.string
+    };
+
+    static defaultProps = {
+        form: '/default/api/url/here'
+    };
+
+    state = {
+        schema: {},
+        uiSchema: {}
+    };
+
+    fetchSchema = async () => {
+        const {form} = this.props;
+
+        try {
+            // open /Applications/Google\ Chrome.app --args --disable-web-security --user-data-dir
+            const response = await fetch(form, {
+                credentials: 'same-origin',
+                headers: {
+                    'Authorization': 'Bearer ' + (await oidc({userInfoApiUrl: 'http://localhost:8080/uPortal/api/v5-1/userinfo', timeout: 18000})).encoded,
+                    'content-type': 'application/jwt',
+                  }
+            });
+
+            if (!response.ok) {
+                throw new Error(response.statusText);
+            }
+
+            const payload = await response.json();
+            const uiSchema = payload[0].metadata;
+            const schema = payload[0].schema;
+
+            this.setState({schema, uiSchema});
+        } catch (err) {
+            // error
+            console.error(err);
+        }
+    };
+
+    componentDidMount = this.fetchSchema;
+
+    render = () => {
+        const {schema, uiSchema} = this.state;
         return (
             <Form schema={schema} uiSchema={uiSchema} onChange={log("changed")} onSubmit={log("submitted")} onError={log("errors")} />
         );
