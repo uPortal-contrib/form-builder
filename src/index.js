@@ -3,5 +3,5 @@ import App from './App';
 import RegisterReact from 'reactive-elements';
 import registerServiceWorker from './registerServiceWorker';
 
-RegisterReact.registerReact('communication-preferences', App);
+RegisterReact.registerReact('form-builder', App);
 registerServiceWorker();

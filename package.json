@@ -1,7 +1,6 @@
 {
-  "name": "my-app",
+  "name": "@uportal/form-builder",
   "version": "0.1.0",
-  "private": true,
   "dependencies": {
     "@uportal/open-id-connect": "^1.0.0",
     "ajv": "^6.5.0",
