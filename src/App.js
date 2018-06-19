@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import './App.css';
 import Form from "react-jsonschema-form";
 import PropTypes from 'prop-types';
-import oidc from '@uportal/open-id-connect/src/open-id-connect';
+import oidc from '@uportal/open-id-connect/esm/open-id-connect';
 
 const log = (type) => console.log.bind(console, type);
 
