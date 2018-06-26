@@ -3,3 +3,15 @@ body {
   padding: 0;
   font-family: sans-serif;
 }
+
+#root {
+  padding: 20px;
+}
+
+.checkbox-inline, .radio-inline {
+  margin-right: 1.5rem;
+}
+
+input[type=checkbox], input[type=radio] {
+  margin-right: 0.5rem;
+}
