@@ -41,6 +41,7 @@ class App extends Component {
             const schema = payload.schema;
 
             this.setState({schema, uiSchema});
+            this.fetchFormData();
         } catch (err) {
             // error
             console.error(err);
@@ -74,7 +75,6 @@ class App extends Component {
 
     getForm = () => {
         this.fetchSchema();
-        this.fetchFormData();
     };
 
     componentDidMount = this.getForm;
