@@ -3,6 +3,8 @@ import './App.css';
 import Form from "react-jsonschema-form";
 import PropTypes from 'prop-types';
 import oidc from '@uportal/open-id-connect/esm/open-id-connect';
+import FontAwesomeIcon from '@fortawesome/react-fontawesome';
+import {faExclamationCircle} from '@fortawesome/fontawesome-free-solid';
 
 const log = (type) => console.log.bind(console, type);
 
@@ -16,8 +18,27 @@ class App extends Component {
     state = {
         schema: {},
         uiSchema: {},
-        formData: {}
+        formData: {},
+        hasError: false,
+        errorMessage: ''
     };
+
+    handleOidc = (err, token) => {
+        if (err) {
+            const hasError = true;
+            const errorMessage = 'There was a problem authorizing this request.';
+            this.setState({hasError, errorMessage});
+            throw new Error(err);
+        } else {
+            return token.encoded;
+        }
+    };
+
+    handleFbmsError = () => {
+        const hasError = true;
+        const errorMessage = 'There was a problem finding your form.';
+        this.setState({hasError, errorMessage});
+    }
 
     fetchSchema = async () => {
         const {formUrl, oidcUrl} = this.props;
@@ -27,12 +48,13 @@ class App extends Component {
             const response = await fetch(formUrl, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded : (await oidc({timeout: 18000})).encoded),
+                    'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
                     'content-type': 'application/jwt',
                   }
             });
 
             if (!response.ok) {
+                this.handleFbmsError();
                 throw new Error(response.statusText);
             }
 
@@ -55,12 +77,13 @@ class App extends Component {
             const response = await fetch(responseUrl, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded : (await oidc({timeout: 18000})).encoded),
+                    'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
                     'content-type': 'application/jwt',
                   }
             });
 
             if (!response.ok) {
+                this.handleFbmsError();
                 throw new Error(response.statusText);
             }
 
@@ -80,10 +103,16 @@ class App extends Component {
     componentDidMount = this.getForm;
 
     render = () => {
-        const {schema, uiSchema, formData} = this.state;
-        return (
-            <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={log("submitted")} onError={log("errors")} />
-        );
+        const {schema, uiSchema, formData, hasError, errorMessage} = this.state;
+        if (hasError) {
+            return (
+                <div className="alert alert-danger" role="alert"><FontAwesomeIcon icon="exclamation-circle" /> {errorMessage}</div>
+            );
+        } else {
+            return (
+                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={log("submitted")} onError={log("errors")} />
+            );
+        }
     }
 }
 
