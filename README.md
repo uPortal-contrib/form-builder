@@ -11,14 +11,17 @@ npm install @uportal/form-builder
 ## Usage
 
 ```
-<form-builder fbms-base-url="http://localhost:8091/api/v1/forms/" fbms-form-name="communication-preferences" response-url="http://localhost:8091/api/v1/responses/" oidc-url="http://localhost:8080/uPortal/api/v5-1/userinfo"></form-builder>
+<form-builder
+    fbms-base-url="/fbms"
+    fbms-form-fname="communication-preferences"
+    oidc-url="/uPortal/api/v5-1/userinfo">
+</form-builder>
 ```
 
 ## Properties
 
-- **fbms-base-url**: Base URL of the form builder micro service. Requires trailing forward slash.
-- **fbms-form-name**: Form name that is appended to the fbms-base-url.
-- **response-url**: URL that is called to get previously entered form data for prepopulation of form.
+- **fbms-base-url**: Base URL of the form builder micro service.
+- **fbms-form-fname**: Form name that is appended to the fbms-base-url.
 - **oidc-url**: Open ID Connect URL to authenticate requests.
 
 ## Resources
