@@ -54,7 +54,7 @@ class App extends Component {
                 headers: {
                     'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
                     'content-type': 'application/jwt',
-                  }
+                }
             });
 
             if (!response.ok) {
@@ -83,7 +83,7 @@ class App extends Component {
                 headers: {
                     'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
                     'content-type': 'application/jwt',
-                  }
+                }
             });
 
             if (!response.ok) {
@@ -108,17 +108,42 @@ class App extends Component {
         this.fetchSchema();
     };
 
+    submitForm = async (userFormData) => {
+        const {fbmsBaseUrl, fbmsFormFname, oidcUrl} = this.props;
+        try {
+            const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
+                    'content-type': 'application/jwt',
+                },
+                body: JSON.stringify(userFormData)
+            });
+
+            if (!response.ok) {
+                    this.handleFbmsError();
+                    throw new Error(response.statusText);
+            }
+        } catch (err) {
+            // error
+            console.error(err);
+        }
+    };
+
     componentDidMount = this.getForm;
 
     render = () => {
         const {schema, uiSchema, formData, hasError, errorMessage} = this.state;
+        const onSubmit = ({formData}) => this.submitForm(formData);
+
         if (hasError) {
             return (
                 <div className="alert alert-danger" role="alert"><FontAwesomeIcon icon="exclamation-circle" /> {errorMessage}</div>
             );
         } else {
             return (
-                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={log("submitted")} onError={log("errors")} />
+                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")} />
             );
         }
     }
