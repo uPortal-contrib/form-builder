@@ -84,8 +84,12 @@ class App extends Component {
             });
 
             if (!response.ok) {
-                this.handleFbmsError();
-                throw new Error(response.statusText);
+                if (response.status !== 404) {
+                    this.handleFbmsError();
+                    throw new Error(response.statusText);
+                } else {
+                    return;
+                }
             }
 
             const payload = await response.json();
