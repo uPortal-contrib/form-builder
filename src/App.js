@@ -10,7 +10,8 @@ const log = (type) => console.log.bind(console, type);
 
 class App extends Component {
     static propTypes = {
-        formUrl: PropTypes.string.isRequired,
+        fbmsBaseUrl: PropTypes.string.isRequired,
+        fbmsFormName: PropTypes.string.isRequired,
         responseUrl: PropTypes.string.isRequired,
         oidcUrl: PropTypes.string
     };
@@ -41,11 +42,11 @@ class App extends Component {
     }
 
     fetchSchema = async () => {
-        const {formUrl, oidcUrl} = this.props;
+        const {fbmsBaseUrl, fbmsFormName, oidcUrl} = this.props;
 
         try {
             // open /Applications/Google\ Chrome.app --args --disable-web-security --user-data-dir
-            const response = await fetch(formUrl, {
+            const response = await fetch(fbmsBaseUrl + fbmsFormName, {
                 credentials: 'same-origin',
                 headers: {
                     'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
@@ -71,10 +72,10 @@ class App extends Component {
     };
 
     fetchFormData = async () => {
-        const {responseUrl, oidcUrl} = this.props;
+        const {responseUrl, fbmsFormName, oidcUrl} = this.props;
 
         try {
-            const response = await fetch(responseUrl, {
+            const response = await fetch(responseUrl + fbmsFormName, {
                 credentials: 'same-origin',
                 headers: {
                     'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
