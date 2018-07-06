@@ -1,5 +1,5 @@
 import './index.css';
 import App from './App';
-import 'reactive-elements';
+import registerReact from 'reactive-elements';
 
-document.registerReact('form-builder', App);
+registerReact.registerReact('form-builder', App);
