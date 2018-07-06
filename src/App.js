@@ -28,6 +28,7 @@ class App extends Component {
     };
 
     handleOidc = (err, token) => {
+        console.info('*********** handle oidc', err, token);
         if (err) {
             const hasError = true;
             const errorMessage = 'There was a problem authorizing this request.';
@@ -110,25 +111,24 @@ class App extends Component {
 
     submitForm = async (userFormData) => {
         const {fbmsBaseUrl, fbmsFormFname, oidcUrl} = this.props;
+
         try {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
                     'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
-                    'content-type': 'application/jwt',
+                    'content-type': 'application/json',
                 },
                 body: JSON.stringify(userFormData)
             });
 
             if (!response.ok) {
-                console.info('*********** response', response);
                     this.handleFbmsError();
                     throw new Error(response.statusText);
             }
 
             const payload = await response.json();
-            console.info('*********** payload', payload);
         } catch (err) {
             // error
             console.error(err);
