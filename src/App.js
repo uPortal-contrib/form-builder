@@ -170,7 +170,7 @@ class App extends Component {
         } if (hasSuccess) {
             return (
                 <div>
-                    <div className="alert alert-success" role="alert"><FontAwesomeIcon icon="exclamation-circle" /> Your form was successfully submitted.</div>
+                    <div className="alert alert-success" role="alert"><FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.</div>
                     <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")}/>
                 </div>
             );
