@@ -122,9 +122,13 @@ class App extends Component {
             });
 
             if (!response.ok) {
+                console.info('*********** response', response);
                     this.handleFbmsError();
                     throw new Error(response.statusText);
             }
+
+            const payload = await response.json();
+            console.info('*********** payload', payload);
         } catch (err) {
             // error
             console.error(err);
