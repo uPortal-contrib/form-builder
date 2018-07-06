@@ -1,10 +1,10 @@
 import React, { Component } from 'react';
-import './App.css';
+import 'document-register-element';
 import Form from "react-jsonschema-form";
 import PropTypes from 'prop-types';
 import oidc from '@uportal/open-id-connect';
 import FontAwesomeIcon from '@fortawesome/react-fontawesome';
-import {faExclamationCircle} from '@fortawesome/fontawesome-free-solid';
+// import {faExclamationCircle} from '@fortawesome/fontawesome-free-solid';
 
 const log = (type) => console.log.bind(console, type);
 
@@ -27,17 +27,6 @@ class App extends Component {
         errorMessage: ''
     };
 
-    handleOidc = (err, token) => {
-        if (err) {
-            const hasError = true;
-            const errorMessage = 'There was a problem authorizing this request.';
-            this.setState({hasError, errorMessage});
-            throw new Error(err);
-        } else {
-            return token.encoded;
-        }
-    };
-
     handleFbmsError = () => {
         const hasError = true;
         const errorMessage = 'There was a problem finding your form.';
@@ -52,7 +41,7 @@ class App extends Component {
             const response = await fetch(fbmsBaseUrl + '/api/v1/forms/' + fbmsFormFname, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
+                    'Authorization': 'Bearer ' + (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded,
                     'content-type': 'application/jwt',
                   }
             });
@@ -71,6 +60,7 @@ class App extends Component {
         } catch (err) {
             // error
             console.error(err);
+            this.setState({hasError: true, errorMessage: 'There was a problem authorizing this request.'});
         }
     };
 
@@ -81,7 +71,7 @@ class App extends Component {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
+                    'Authorization': 'Bearer ' + (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded,
                     'content-type': 'application/jwt',
                   }
             });
@@ -101,6 +91,7 @@ class App extends Component {
         } catch (err) {
             // error
             console.error(err);
+            this.setState({hasError: true, errorMessage: 'There was a problem authorizing this request.'});
         }
     };
 
