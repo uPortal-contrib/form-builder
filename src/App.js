@@ -24,37 +24,49 @@ class App extends Component {
         uiSchema: {},
         formData: {},
         hasError: false,
-        errorMessage: ''
+        errorMessage: '',
+        hasSuccess: false
     };
 
-    handleOidc = (err, token) => {
-        if (err) {
-            const hasError = true;
-            const errorMessage = 'There was a problem authorizing this request.';
-            this.setState({hasError, errorMessage});
-            throw new Error(err);
+    handleOidcError = (err) => {
+        console.error(err);
+        this.setState({hasError: true, errorMessage: 'There was a problem authorizing this request.'});
+    };
+
+    handleFbmsError = (err) => {
+        let message;
+
+        if (err.type === 'submission') {
+            message = 'There was a problem submitting your form.';
         } else {
-            return token.encoded;
+            message = 'There was a problem finding your form.';
+        }
+
+        this.setState({hasError: true, errorMessage: message});
+    };
+
+    getToken = async () => {
+        const {oidcUrl} = this.props;
+
+        try {
+            const {encoded} = await oidc({userInfoApiUrl: oidcUrl, timeout: 18000});
+            return encoded;
+        } catch (err) {
+            console.error(err);
+            this.handleOidcError(err);
         }
     };
 
-    handleFbmsError = () => {
-        const hasError = true;
-        const errorMessage = 'There was a problem finding your form.';
-        this.setState({hasError, errorMessage});
-    }
-
     fetchSchema = async () => {
-        const {fbmsBaseUrl, fbmsFormFname, oidcUrl} = this.props;
-
+        const {fbmsBaseUrl, fbmsFormFname} = this.props;
         try {
             // open /Applications/Google\ Chrome.app --args --disable-web-security --user-data-dir
             const response = await fetch(fbmsBaseUrl + '/api/v1/forms/' + fbmsFormFname, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
+                    'Authorization': 'Bearer ' + await this.getToken(),
                     'content-type': 'application/jwt',
-                  }
+                }
             });
 
             if (!response.ok) {
@@ -70,25 +82,24 @@ class App extends Component {
             this.fetchFormData();
         } catch (err) {
             // error
-            console.error(err);
+            console.error('fdfdf' + err);
         }
     };
 
     fetchFormData = async () => {
-        const {fbmsBaseUrl, fbmsFormFname, oidcUrl} = this.props;
+        const {fbmsBaseUrl, fbmsFormFname} = this.props;
 
         try {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
+                    'Authorization': 'Bearer ' + await this.getToken(),
                     'content-type': 'application/jwt',
-                  }
+                }
             });
 
             if (!response.ok) {
                 if (response.status !== 404) {
-                    this.handleFbmsError();
                     throw new Error(response.statusText);
                 } else {
                     return;
@@ -99,8 +110,46 @@ class App extends Component {
             const formData = payload.answers;
             this.setState({formData});
         } catch (err) {
-            // error
             console.error(err);
+            this.handleFbmsError(err);
+        }
+    };
+
+    transformBody = (formData) => {
+        const {fbmsFormFname} = this.props;
+        return {
+            username: 'admin',
+            formFname: fbmsFormFname,
+            formVersion: 1,
+            timestamp: Date.now(),
+            answers: formData
+        };
+    };
+
+    submitForm = async (userFormData) => {
+        const {fbmsBaseUrl, fbmsFormFname} = this.props;
+        const body = this.transformBody(userFormData);
+        try {
+            const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: {
+                    'Authorization': 'Bearer ' + await this.getToken(),
+                    'content-type': 'application/json',
+                },
+                body: JSON.stringify(body)
+            });
+
+            if (!response.ok) {
+                console.info('*********** response', response);
+                throw new Error(response.statusText);
+            }
+
+            this.setState({hasSuccess: true});
+        } catch (err) {
+            err.type = 'submission';
+            console.error(err);
+            this.handleFbmsError(err);
         }
     };
 
@@ -111,14 +160,23 @@ class App extends Component {
     componentDidMount = this.getForm;
 
     render = () => {
-        const {schema, uiSchema, formData, hasError, errorMessage} = this.state;
+        const {schema, uiSchema, formData, hasError, hasSuccess, errorMessage} = this.state;
+        const onSubmit = ({formData}) => this.submitForm(formData);
+
         if (hasError) {
             return (
                 <div className="alert alert-danger" role="alert"><FontAwesomeIcon icon="exclamation-circle" /> {errorMessage}</div>
             );
+        } if (hasSuccess) {
+            return (
+                <div>
+                    <div className="alert alert-success" role="alert"><FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.</div>
+                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")}/>
+                </div>
+            );
         } else {
             return (
-                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={log("submitted")} onError={log("errors")} />
+                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")} />
             );
         }
     }
