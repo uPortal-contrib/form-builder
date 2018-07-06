@@ -24,7 +24,8 @@ class App extends Component {
         uiSchema: {},
         formData: {},
         hasError: false,
-        errorMessage: ''
+        errorMessage: '',
+        hasSuccess: false
     };
 
     handleOidcError = (err) => {
@@ -143,6 +144,8 @@ class App extends Component {
                 console.info('*********** response', response);
                 throw new Error(response.statusText);
             }
+
+            this.setState({hasSuccess: true});
         } catch (err) {
             err.type = 'submission';
             console.error(err);
@@ -157,12 +160,19 @@ class App extends Component {
     componentDidMount = this.getForm;
 
     render = () => {
-        const {schema, uiSchema, formData, hasError, errorMessage} = this.state;
+        const {schema, uiSchema, formData, hasError, hasSuccess, errorMessage} = this.state;
         const onSubmit = ({formData}) => this.submitForm(formData);
 
         if (hasError) {
             return (
                 <div className="alert alert-danger" role="alert"><FontAwesomeIcon icon="exclamation-circle" /> {errorMessage}</div>
+            );
+        } if (hasSuccess) {
+            return (
+                <div>
+                    <div className="alert alert-success" role="alert"><FontAwesomeIcon icon="exclamation-circle" /> Your form was successfully submitted.</div>
+                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")}/>
+                </div>
             );
         } else {
             return (
