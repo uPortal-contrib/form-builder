@@ -1,22 +1,22 @@
-import React, { Component } from "react";
-import "document-register-element";
-import Form from "react-jsonschema-form";
-import PropTypes from "prop-types";
-import oidc from "@uportal/open-id-connect";
-import FontAwesomeIcon from "@fortawesome/react-fontawesome";
+import React, {Component} from 'react';
+import 'document-register-element';
+import Form from 'react-jsonschema-form';
+import PropTypes from 'prop-types';
+import oidc from '@uportal/open-id-connect';
+import FontAwesomeIcon from '@fortawesome/react-fontawesome';
 // import {faExclamationCircle} from '@fortawesome/fontawesome-free-solid';
 
-const log = type => console.log.bind(console, type);
+const log = (type) => console.log.bind(console, type);
 
 class App extends Component {
   static propTypes = {
     fbmsBaseUrl: PropTypes.string,
     fbmsFormFname: PropTypes.string.isRequired,
-    oidcUrl: PropTypes.string
+    oidcUrl: PropTypes.string,
   };
 
   static defaultProps = {
-    fbmsBaseUrl: "/fbms"
+    fbmsBaseUrl: '/fbms',
   };
 
   state = {
@@ -24,30 +24,30 @@ class App extends Component {
     uiSchema: {},
     formData: {},
     hasError: false,
-    errorMessage: ""
+    errorMessage: '',
   };
 
-  handleOidcError = err => {
+  handleOidcError = (err) => {
     console.error(err);
     this.setState({
       hasError: true,
-      errorMessage: "There was a problem authorizing this request."
+      errorMessage: 'There was a problem authorizing this request.',
     });
   };
 
-  handleFbmsError = err => {
+  handleFbmsError = (err) => {
     console.error(err);
     const hasError = true;
-    const errorMessage = "There was a problem finding your form.";
-    this.setState({ hasError, errorMessage });
+    const errorMessage = 'There was a problem finding your form.';
+    this.setState({hasError, errorMessage});
   };
 
   fetchSchema = async () => {
-    const { fbmsBaseUrl, fbmsFormFname, oidcUrl } = this.props;
+    const {fbmsBaseUrl, fbmsFormFname, oidcUrl} = this.props;
 
     let token;
     try {
-      token = (await oidc({ userInfoApiUrl: oidcUrl, timeout: 18000 })).encoded;
+      token = (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded;
     } catch (err) {
       return this.handleOidcError(err);
     }
@@ -55,13 +55,13 @@ class App extends Component {
     try {
       // open /Applications/Google\ Chrome.app --args --disable-web-security --user-data-dir
       const response = await fetch(
-        fbmsBaseUrl + "/api/v1/forms/" + fbmsFormFname,
+        fbmsBaseUrl + '/api/v1/forms/' + fbmsFormFname,
         {
-          credentials: "same-origin",
+          credentials: 'same-origin',
           headers: {
-            Authorization: "Bearer " + token,
-            "content-type": "application/jwt"
-          }
+            'Authorization': 'Bearer ' + token,
+            'content-type': 'application/jwt',
+          },
         }
       );
 
@@ -73,7 +73,7 @@ class App extends Component {
       const uiSchema = payload.metadata;
       const schema = payload.schema;
 
-      this.setState({ schema, uiSchema });
+      this.setState({schema, uiSchema});
       this.fetchFormData();
     } catch (err) {
       this.handleFbmsError(err);
@@ -81,24 +81,24 @@ class App extends Component {
   };
 
   fetchFormData = async () => {
-    const { fbmsBaseUrl, fbmsFormFname, oidcUrl } = this.props;
+    const {fbmsBaseUrl, fbmsFormFname, oidcUrl} = this.props;
 
     let token;
     try {
-      token = (await oidc({ userInfoApiUrl: oidcUrl, timeout: 18000 })).encoded;
+      token = (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded;
     } catch (err) {
       return this.handleOidcError(err);
     }
 
     try {
       const response = await fetch(
-        fbmsBaseUrl + "/api/v1/submissions/" + fbmsFormFname,
+        fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname,
         {
-          credentials: "same-origin",
+          credentials: 'same-origin',
           headers: {
-            Authorization: "Bearer " + token,
-            "content-type": "application/jwt"
-          }
+            'Authorization': 'Bearer ' + token,
+            'content-type': 'application/jwt',
+          },
         }
       );
 
@@ -112,7 +112,7 @@ class App extends Component {
 
       const payload = await response.json();
       const formData = payload.answers;
-      this.setState({ formData });
+      this.setState({formData});
     } catch (err) {
       this.handleFbmsError(err);
     }
@@ -125,7 +125,7 @@ class App extends Component {
   componentDidMount = this.getForm;
 
   render = () => {
-    const { schema, uiSchema, formData, hasError, errorMessage } = this.state;
+    const {schema, uiSchema, formData, hasError, errorMessage} = this.state;
     if (hasError) {
       return (
         <div className="alert alert-danger" role="alert">
@@ -138,9 +138,9 @@ class App extends Component {
           schema={schema}
           uiSchema={uiSchema}
           formData={formData}
-          onChange={log("changed")}
-          onSubmit={log("submitted")}
-          onError={log("errors")}
+          onChange={log('changed')}
+          onSubmit={log('submitted')}
+          onError={log('errors')}
         />
       );
     }
