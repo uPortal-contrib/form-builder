@@ -27,7 +27,13 @@ class App extends Component {
         errorMessage: ''
     };
 
-    handleFbmsError = () => {
+    handleOidcError = (err) => {
+      console.error(err);
+      this.setState({hasError: true, errorMessage: 'There was a problem authorizing this request.'});
+    }
+
+    handleFbmsError = (err) => {
+      console.error(err)
         const hasError = true;
         const errorMessage = 'There was a problem finding your form.';
         this.setState({hasError, errorMessage});
@@ -36,18 +42,24 @@ class App extends Component {
     fetchSchema = async () => {
         const {fbmsBaseUrl, fbmsFormFname, oidcUrl} = this.props;
 
+        let token;
+        try {
+          token = (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded
+        } catch (err) {
+          return this.handleOidcError(err);
+        }
+
         try {
             // open /Applications/Google\ Chrome.app --args --disable-web-security --user-data-dir
             const response = await fetch(fbmsBaseUrl + '/api/v1/forms/' + fbmsFormFname, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded,
+                    'Authorization': 'Bearer ' + token,
                     'content-type': 'application/jwt',
                   }
             });
 
             if (!response.ok) {
-                this.handleFbmsError();
                 throw new Error(response.statusText);
             }
 
@@ -58,27 +70,31 @@ class App extends Component {
             this.setState({schema, uiSchema});
             this.fetchFormData();
         } catch (err) {
-            // error
-            console.error(err);
-            this.setState({hasError: true, errorMessage: 'There was a problem authorizing this request.'});
+            this.handleFbmsError(err);
         }
     };
 
     fetchFormData = async () => {
         const {fbmsBaseUrl, fbmsFormFname, oidcUrl} = this.props;
 
+        let token;
+        try {
+          token = (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded
+        } catch (err) {
+          return this.handleOidcError(err);
+        }
+
         try {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000})).encoded,
+                    'Authorization': 'Bearer ' + token,
                     'content-type': 'application/jwt',
                   }
             });
 
             if (!response.ok) {
                 if (response.status !== 404) {
-                    this.handleFbmsError();
                     throw new Error(response.statusText);
                 } else {
                     return;
@@ -89,9 +105,7 @@ class App extends Component {
             const formData = payload.answers;
             this.setState({formData});
         } catch (err) {
-            // error
-            console.error(err);
-            this.setState({hasError: true, errorMessage: 'There was a problem authorizing this request.'});
+            this.handleFbmsError(err);
         }
     };
 
