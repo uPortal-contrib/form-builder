@@ -105,13 +105,20 @@ class App extends Component {
         }
     };
 
-    getForm = () => {
-        this.fetchSchema();
+    transformBody = (formData) => {
+        const {fbmsFormFname} = this.props;
+        return {
+            username: 'admin',
+            formFname: fbmsFormFname,
+            formVersion: 1,
+            timestamp: Date.now(),
+            answers: formData
+        };
     };
 
     submitForm = async (userFormData) => {
         const {fbmsBaseUrl, fbmsFormFname, oidcUrl} = this.props;
-
+        const body = this.transformBody(userFormData);
         try {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
                 method: 'POST',
@@ -120,7 +127,7 @@ class App extends Component {
                     'Authorization': 'Bearer ' + (oidcUrl ? (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}, this.handleOidc)) : (await oidc({timeout: 18000}, this.handleOidc))),
                     'content-type': 'application/json',
                 },
-                body: JSON.stringify(userFormData)
+                body: JSON.stringify(body)
             });
 
             if (!response.ok) {
@@ -133,6 +140,10 @@ class App extends Component {
             // error
             console.error(err);
         }
+    };
+
+    getForm = () => {
+        this.fetchSchema();
     };
 
     componentDidMount = this.getForm;
