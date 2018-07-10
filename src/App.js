@@ -143,7 +143,21 @@ class App extends Component {
             if (!response.ok) {
                 throw new Error(response.statusText);
             }
+
             this.fetchFormData();
+
+            let formForward;
+            for (let header of response.headers.entries()) {
+                if (header[0] === 'x-fbms-formforward') {
+                    formForward = header[1];
+                }
+            }
+
+            if (formForward) {
+                this.props.fbmsFormFname = formForward;
+                this.getForm();
+            }
+
             this.setState({hasSuccess: true});
         } catch (err) {
             err.type = 'submission';
