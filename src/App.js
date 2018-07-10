@@ -49,8 +49,7 @@ class App extends Component {
         const {oidcUrl} = this.props;
 
         try {
-            const {encoded} = await oidc({userInfoApiUrl: oidcUrl, timeout: 18000});
-            return encoded;
+            return (await oidc({userInfoApiUrl: oidcUrl, timeout: 18000}));
         } catch (err) {
             console.error(err);
             this.handleOidcError(err);
@@ -64,7 +63,7 @@ class App extends Component {
             const response = await fetch(fbmsBaseUrl + '/api/v1/forms/' + fbmsFormFname, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + await this.getToken(),
+                    'Authorization': 'Bearer ' + (await this.getToken()).encoded,
                     'content-type': 'application/jwt',
                 }
             });
@@ -82,7 +81,7 @@ class App extends Component {
             this.fetchFormData();
         } catch (err) {
             // error
-            console.error('fdfdf' + err);
+            console.error(err);
         }
     };
 
@@ -93,7 +92,7 @@ class App extends Component {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + await this.getToken(),
+                    'Authorization': 'Bearer ' + (await this.getToken()).encoded,
                     'content-type': 'application/jwt',
                 }
             });
@@ -115,10 +114,10 @@ class App extends Component {
         }
     };
 
-    transformBody = (formData) => {
+    transformBody = (formData, username) => {
         const {fbmsFormFname} = this.props;
         return {
-            username: 'admin',
+            username: username,
             formFname: fbmsFormFname,
             formVersion: 1,
             timestamp: Date.now(),
@@ -128,13 +127,14 @@ class App extends Component {
 
     submitForm = async (userFormData) => {
         const {fbmsBaseUrl, fbmsFormFname} = this.props;
-        const body = this.transformBody(userFormData);
+        const token = await this.getToken();
+        const body = this.transformBody(userFormData, token.decoded.sub);
         try {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
                 method: 'POST',
                 credentials: 'same-origin',
                 headers: {
-                    'Authorization': 'Bearer ' + await this.getToken(),
+                    'Authorization': 'Bearer ' + token.encoded,
                     'content-type': 'application/json',
                 },
                 body: JSON.stringify(body)
