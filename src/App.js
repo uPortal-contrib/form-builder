@@ -143,7 +143,7 @@ class App extends Component {
             if (!response.ok) {
                 throw new Error(response.statusText);
             }
-
+            this.fetchFormData();
             this.setState({hasSuccess: true});
         } catch (err) {
             err.type = 'submission';
