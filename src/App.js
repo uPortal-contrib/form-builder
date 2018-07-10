@@ -141,7 +141,6 @@ class App extends Component {
             });
 
             if (!response.ok) {
-                console.info('*********** response', response);
                 throw new Error(response.statusText);
             }
 
@@ -159,18 +158,25 @@ class App extends Component {
 
     componentDidMount = this.getForm;
 
+    componentDidUpdate = () => {
+       const element = document.getElementById('form-builder-notification');
+       if (element) {
+           element.scrollIntoView({behavior: 'smooth'});
+       }
+    };
+
     render = () => {
         const {schema, uiSchema, formData, hasError, hasSuccess, errorMessage} = this.state;
         const onSubmit = ({formData}) => this.submitForm(formData);
 
         if (hasError) {
             return (
-                <div className="alert alert-danger" role="alert"><FontAwesomeIcon icon="exclamation-circle" /> {errorMessage}</div>
+                <div id="form-builder-notification" className="alert alert-danger" role="alert"><FontAwesomeIcon icon="exclamation-circle" /> {errorMessage}</div>
             );
         } if (hasSuccess) {
             return (
                 <div>
-                    <div className="alert alert-success" role="alert"><FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.</div>
+                    <div id="form-builder-notification" className="alert alert-success" role="alert"><FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.</div>
                     <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")}/>
                 </div>
             );
