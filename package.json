@@ -23,5 +23,16 @@
     "build": "react-scripts build && shx mv build/static/js/*.js build/static/js/form-builder.js",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
+  },
+  "renovate": {
+    "extends": [
+      "schedule:weekly",
+      "group:all",
+      ":rebaseStalePrs",
+      ":preserveSemverRanges",
+      ":semanticPrefixChore",
+      ":ignoreUnstable",
+      ":renovatePrefix"
+    ]
   }
 }
