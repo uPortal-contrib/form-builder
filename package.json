@@ -1,6 +1,20 @@
 {
   "name": "@uportal/form-builder",
-  "version": "0.1.0",
+  "description": "Create html input forms on the fly",
+  "version": "0.0.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uPortal-contrib/form-builder.git"
+  },
+  "author": "Apereo <uportal-dev@apereo.org>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/uPortal-contrib/form-builder/issues"
+  },
+  "homepage": "https://github.com/uPortal-contrib/form-builder",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@fortawesome/fontawesome": "^1.1.4",
     "@fortawesome/fontawesome-free-solid": "^5.0.8",
