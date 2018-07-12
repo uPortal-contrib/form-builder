@@ -4,7 +4,6 @@ import Form from "react-jsonschema-form";
 import PropTypes from 'prop-types';
 import oidc from '@uportal/open-id-connect';
 import FontAwesomeIcon from '@fortawesome/react-fontawesome';
-import {faExclamationCircle} from '@fortawesome/fontawesome-free-solid';
 
 const log = (type) => console.log.bind(console, type);
 
