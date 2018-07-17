@@ -9,6 +9,7 @@ import 'regenerator-runtime/runtime';
 
 library.add(faExclamationCircle, faCheckCircle);
 
+// FIXME: remove this
 const log = (type) => console.log.bind(console, type);
 
 class App extends Component {
