@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+### Build
+
+- Move font awesome react to dev dependency, it is not directly included but is built into the bundle (#31)
+- Include build in release (#31)
+
+### Chore
+
+- Update font awesome and font awesome react (#31)
+- Remove unused files (#31)
+
 ## [0.1.1][] - 2018-07-16
 
 ### Refactor

@@ -1,10 +1,15 @@
 import React, { Component } from 'react';
-import './App.css';
 import Form from "react-jsonschema-form";
 import PropTypes from 'prop-types';
 import oidc from '@uportal/open-id-connect';
-import FontAwesomeIcon from '@fortawesome/react-fontawesome';
+import { library } from '@fortawesome/fontawesome-svg-core';
+import { faExclamationCircle, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import 'regenerator-runtime/runtime';
 
+library.add(faExclamationCircle, faCheckCircle);
+
+// FIXME: remove this
 const log = (type) => console.log.bind(console, type);
 
 class App extends Component {
