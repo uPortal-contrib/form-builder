@@ -7,10 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+### Refactor
+
+- Move `react-scripts` to `devDependencies` reducing dependencies included in production install (#30)
+
 ### Docs
 
 - Add changelog (#27)
 - Add license (#25)
+- Add html flag to example in readme (#28)
 
 ### Chore
 
