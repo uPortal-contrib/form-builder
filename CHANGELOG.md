@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Move font awesome react to dev dependency, it is not directly included but is built into the bundle (#31)
 - Include build in release (#31)
 
+### Fix
+
+- Add web component polyfill for Firefox and IE (#34).
+- Ensure `error` is defined before reading error messages (#34).
+
 ### Chore
 
 - Update font awesome and font awesome react (#31)
