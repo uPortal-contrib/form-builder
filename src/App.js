@@ -28,7 +28,7 @@ class App extends Component {
         uiSchema: {},
         formData: {},
         hasError: false,
-        errorMessage: '',
+        error: {},
         hasSuccess: false
     };
 
@@ -38,15 +38,13 @@ class App extends Component {
     };
 
     handleFbmsError = (err) => {
-        let message;
-
         if (err.type === 'submission') {
-            message = 'There was a problem submitting your form.';
+            err.messageHeader = 'There was a problem submitting your form.';
         } else {
-            message = 'There was a problem finding your form.';
+            err.messageHeader = 'There was a problem finding your form.';
         }
 
-        this.setState({hasError: true, errorMessage: message});
+        this.setState({hasError: true, error: err});
     };
 
     getToken = async () => {
@@ -73,7 +71,6 @@ class App extends Component {
             });
 
             if (!response.ok) {
-                this.handleFbmsError();
                 throw new Error(response.statusText);
             }
 
@@ -85,6 +82,7 @@ class App extends Component {
             this.fetchFormData();
         } catch (err) {
             // error
+            this.handleFbmsError(err);
             console.error(err);
         }
     };
@@ -145,7 +143,9 @@ class App extends Component {
             });
 
             if (!response.ok) {
-                throw new Error(response.statusText);
+                let error = await response.json();
+                error.type = 'submission';
+                this.handleFbmsError(error);
             }
 
             this.fetchFormData();
@@ -164,8 +164,8 @@ class App extends Component {
 
             this.setState({hasSuccess: true});
         } catch (err) {
-            err.type = 'submission';
             console.error(err);
+            err.type = 'submission';
             this.handleFbmsError(err);
         }
     };
@@ -184,12 +184,24 @@ class App extends Component {
     };
 
     render = () => {
-        const {schema, uiSchema, formData, hasError, hasSuccess, errorMessage} = this.state;
+        const {schema, uiSchema, formData, hasError, hasSuccess, error} = this.state;
         const onSubmit = ({formData}) => this.submitForm(formData);
 
         if (hasError) {
             return (
-                <div id="form-builder-notification" className="alert alert-danger" role="alert"><FontAwesomeIcon icon="exclamation-circle" /> {errorMessage}</div>
+                <div>
+                    <div id="form-builder-notification" className="alert alert-danger" role="alert">
+                        <h3><FontAwesomeIcon icon="exclamation-circle" /> {error.messageHeader}</h3>
+                        {error.messages.length > 0 &&
+                            <ul>
+                                {error.messages.map((item, index) => (
+                                    <li key={index}>{item}</li>
+                                ))}
+                            </ul>
+                        }
+                    </div>
+                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")}/>
+                </div>
             );
         } if (hasSuccess) {
             return (
