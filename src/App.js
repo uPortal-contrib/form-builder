@@ -192,7 +192,7 @@ class App extends Component {
                 <div>
                     <div id="form-builder-notification" className="alert alert-danger" role="alert">
                         <h3><FontAwesomeIcon icon="exclamation-circle" /> {error.messageHeader}</h3>
-                        {error.messages.length > 0 &&
+                        {error && error.messages && error.messages.length > 0 &&
                             <ul>
                                 {error.messages.map((item, index) => (
                                     <li key={index}>{item}</li>
