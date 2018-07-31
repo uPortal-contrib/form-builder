@@ -7,20 +7,25 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
-### Build
+### Feature
 
-- Move font awesome react to dev dependency, it is not directly included but is built into the bundle (#31)
-- Include build in release (#31)
+- Show validation messages sent back from server (#33).
 
 ### Fix
 
 - Add web component polyfill for Firefox and IE (#34).
 - Ensure `error` is defined before reading error messages (#34).
 
+### Build
+
+- Move font awesome react to dev dependency, it is not directly included but is built into the bundle (#31)
+- Include build in release (#31)
+
 ### Chore
 
-- Update font awesome and font awesome react (#31)
-- Remove unused files (#31)
+- Update font awesome and font awesome react (#31).
+- Remove unused files (#31).
+- Reactive elements updated to version 0.10.0 (#32).
 
 ## [0.1.1][] - 2018-07-16
 
