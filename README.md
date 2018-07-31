@@ -1,5 +1,9 @@
 # Form Builder
 
+[![NPM Version](https://img.shields.io/npm/v/@uportal/form-builder.svg)](https://www.npmjs.com/package/@uportal/form-builder)
+[![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.webjars.npm/uportal__form-builder/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.webjars.npm/uportal__form-builder)
+[![Build Status](https://travis-ci.org/uPortal-contrib/form-builder.svg?branch=master)](https://travis-ci.org/uPortal-contrib/form-builder)
+
 > Create html input forms on the fly
 
 ## Installation
