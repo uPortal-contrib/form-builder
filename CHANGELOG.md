@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Remove unused files (#31).
 - Reactive elements updated to version 0.10.0 (#32).
 
+## [0.1.2][] - 2018-07-17
+
+### Chore
+
+- Update font awesome and font awesome react (#31).
+- Remove unused files (#31).
+
 ## [0.1.1][] - 2018-07-16
 
 ### Refactor
@@ -63,6 +70,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Add Committers
 
 [unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v0.2.0...HEAD
-[0.2.0]: https://github.com/uPortal-contrib/form-builder/compare/v0.1.1...v0.2.0
+[0.2.0]: https://github.com/uPortal-contrib/form-builder/compare/v0.1.2...v0.2.0
+[0.1.2]: https://github.com/uPortal-contrib/form-builder/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/uPortal-contrib/form-builder/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/uPortal-contrib/form-builder/compare/bc446238d1735b424bd2a004d9b737c380592b2e...v0.1.0
