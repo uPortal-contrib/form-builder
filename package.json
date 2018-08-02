@@ -36,6 +36,7 @@
     "shx": "^0.3.1"
   },
   "scripts": {
+    "prepublishOnly": "npm run build",
     "start": "react-scripts start",
     "build": "react-scripts build && shx mv build/static/js/*.js build/static/js/form-builder.js",
     "test": "react-scripts test --env=jsdom",
