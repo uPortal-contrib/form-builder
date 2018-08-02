@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+## [0.2.1][] - 2018-08-01
+
 ### Fix
 
 - Hide validation errors when issues have been resolved (#36).
@@ -81,7 +83,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Create README
 - Add Committers
 
-[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v0.2.0...HEAD
+[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/uPortal-contrib/form-builder/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/uPortal-contrib/form-builder/compare/v0.1.2...v0.2.0
 [0.1.2]: https://github.com/uPortal-contrib/form-builder/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/uPortal-contrib/form-builder/compare/v0.1.0...v0.1.1
