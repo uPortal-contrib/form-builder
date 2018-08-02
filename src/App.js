@@ -131,6 +131,8 @@ class App extends Component {
         const {fbmsBaseUrl, fbmsFormFname} = this.props;
         const token = await this.getToken();
         const body = this.transformBody(userFormData, token.decoded.sub);
+        this.setState({hasError: false});
+
         try {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
                 method: 'POST',
