@@ -7,9 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+### Fix
+
+- Hide validation errors when issues have been resolved (#36).
+
 ### Build
 
 - Automatically generate web component during `npm publish` (#35).
+
+### Docs
+
+- NPM, Maven Central and Travis CI status badges added to _README.md_
 
 ## [0.2.0][] - 2018-07-30
 
