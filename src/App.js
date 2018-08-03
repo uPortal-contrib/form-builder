@@ -47,6 +47,10 @@ class App extends Component {
         this.setState({hasError: true, error: err});
     };
 
+    handleChange = (data) => {
+        this.setState({formData: data.formData});
+    };
+
     getToken = async () => {
         const {oidcUrl} = this.props;
 
@@ -148,6 +152,7 @@ class App extends Component {
                 let error = await response.json();
                 error.type = 'submission';
                 this.handleFbmsError(error);
+                throw new Error(response.statusText);
             }
 
             this.fetchFormData();
@@ -167,8 +172,6 @@ class App extends Component {
             this.setState({hasSuccess: true});
         } catch (err) {
             console.error(err);
-            err.type = 'submission';
-            this.handleFbmsError(err);
         }
     };
 
@@ -209,12 +212,12 @@ class App extends Component {
             return (
                 <div>
                     <div id="form-builder-notification" className="alert alert-success" role="alert"><FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.</div>
-                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")}/>
+                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}/>
                 </div>
             );
         } else {
             return (
-                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")} />
+                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} />
             );
         }
     }
