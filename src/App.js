@@ -170,23 +170,25 @@ class App extends Component {
             }
 
             this.setState({hasSuccess: true});
+            this.scrollToNotification();
         } catch (err) {
             console.error(err);
+            this.scrollToNotification();
         }
     };
+
+    scrollToNotification = () => {
+        const element = document.getElementById('form-builder-notification');
+        if (element) {
+            element.scrollIntoView({behavior: 'smooth'});
+        }
+     };
 
     getForm = () => {
         this.fetchSchema();
     };
 
     componentDidMount = this.getForm;
-
-    componentDidUpdate = () => {
-       const element = document.getElementById('form-builder-notification');
-       if (element) {
-           element.scrollIntoView({behavior: 'smooth'});
-       }
-    };
 
     render = () => {
         const {schema, uiSchema, formData, hasError, hasSuccess, error} = this.state;
@@ -205,7 +207,7 @@ class App extends Component {
                             </ul>
                         }
                     </div>
-                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={log("changed")} onSubmit={onSubmit} onError={log("errors")}/>
+                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}/>
                 </div>
             );
         } if (hasSuccess) {
