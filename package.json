@@ -20,8 +20,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@fortawesome/react-fontawesome": "^0.1.1",
-    "@uportal/open-id-connect": "^1.6.0",
+    "@fortawesome/react-fontawesome": "^0.1.2",
+    "@uportal/open-id-connect": "^1.8.0",
     "prop-types": "^15.6.1",
     "react": "^16.4.2",
     "react-dom": "^16.4.2",
