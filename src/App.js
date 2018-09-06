@@ -28,7 +28,7 @@ class App extends Component {
         uiSchema: {},
         formData: {},
         hasError: false,
-        error: {},
+        submissionStatus: {},
         hasSuccess: false,
         fbmsFormFname: this.props.fbmsFormFname,
     };
@@ -45,7 +45,7 @@ class App extends Component {
             err.messageHeader = 'There was a problem finding your form.';
         }
 
-        this.setState({hasError: true, error: err});
+        this.setState({hasError: true, submissionStatus: err});
     };
 
     handleChange = (data) => {
@@ -151,10 +151,11 @@ class App extends Component {
                 body: JSON.stringify(body)
             });
 
+            let submissionStatus = await response.json();
+
             if (!response.ok) {
-                let error = await response.json();
-                error.type = 'submission';
-                this.handleFbmsError(error);
+                submissionStatus.type = 'submission';
+                this.handleFbmsError(submissionStatus);
                 throw new Error(response.statusText);
             }
 
@@ -194,17 +195,17 @@ class App extends Component {
     componentDidMount = this.getForm;
 
     render = () => {
-        const {schema, uiSchema, formData, hasError, hasSuccess, error} = this.state;
+        const {schema, uiSchema, formData, hasError, hasSuccess, submissionStatus} = this.state;
         const onSubmit = ({formData}) => this.submitForm(formData);
 
         if (hasError) {
             return (
                 <div>
                     <div id="form-builder-notification" className="alert alert-danger" role="alert">
-                        <h3><FontAwesomeIcon icon="exclamation-circle" /> {error.messageHeader}</h3>
-                        {error && error.messages && error.messages.length > 0 &&
+                        <h3><FontAwesomeIcon icon="exclamation-circle" /> {submissionStatus.messageHeader}</h3>
+                        {submissionStatus && submissionStatus.messages && submissionStatus.messages.length > 0 &&
                             <ul>
-                                {error.messages.map((item, index) => (
+                                {submissionStatus.messages.map((item, index) => (
                                     <li key={index}>{item}</li>
                                 ))}
                             </ul>
@@ -216,7 +217,16 @@ class App extends Component {
         } if (hasSuccess) {
             return (
                 <div>
-                    <div id="form-builder-notification" className="alert alert-success" role="alert"><FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.</div>
+                    <FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.
+                    {submissionStatus.messages && submissionStatus.messages.length > 0 &&
+                        <div id="form-builder-notification" className="alert alert-success" role="alert">
+                            <ul>
+                                {submissionStatus.messages.map((item, index) => (
+                                    <li key={index}>{item}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    }
                     <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}/>
                 </div>
             );
