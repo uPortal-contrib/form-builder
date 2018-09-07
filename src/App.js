@@ -29,7 +29,8 @@ class App extends Component {
         formData: {},
         hasError: false,
         error: {},
-        hasSuccess: false
+        hasSuccess: false,
+        fbmsFormFname: this.props.fbmsFormFname,
     };
 
     handleOidcError = (err) => {
@@ -63,9 +64,9 @@ class App extends Component {
     };
 
     fetchSchema = async () => {
-        const {fbmsBaseUrl, fbmsFormFname} = this.props;
+        const {fbmsBaseUrl} = this.props;
+        const {fbmsFormFname} = this.state;
         try {
-            // open /Applications/Google\ Chrome.app --args --disable-web-security --user-data-dir
             const response = await fetch(fbmsBaseUrl + '/api/v1/forms/' + fbmsFormFname, {
                 credentials: 'same-origin',
                 headers: {
@@ -92,7 +93,8 @@ class App extends Component {
     };
 
     fetchFormData = async () => {
-        const {fbmsBaseUrl, fbmsFormFname} = this.props;
+        const {fbmsBaseUrl} = this.props;
+        const {fbmsFormFname} = this.state;
 
         try {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
@@ -121,7 +123,7 @@ class App extends Component {
     };
 
     transformBody = (formData, username) => {
-        const {fbmsFormFname} = this.props;
+        const {fbmsFormFname} = this.state;
         return {
             username: username,
             formFname: fbmsFormFname,
@@ -132,7 +134,8 @@ class App extends Component {
     };
 
     submitForm = async (userFormData) => {
-        const {fbmsBaseUrl, fbmsFormFname} = this.props;
+        const {fbmsBaseUrl} = this.props;
+        const {fbmsFormFname} = this.state;
         const token = await this.getToken();
         const body = this.transformBody(userFormData, token.decoded.sub);
         this.setState({hasError: false});
@@ -165,7 +168,7 @@ class App extends Component {
             }
 
             if (formForward) {
-                this.props.fbmsFormFname = formForward;
+                this.setState({fbmsFormFname: formForward});
                 this.getForm();
             }
 
