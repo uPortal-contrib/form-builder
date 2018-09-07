@@ -45,7 +45,7 @@ class App extends Component {
             err.messageHeader = 'There was a problem finding your form.';
         }
 
-        this.setState({hasError: true, submissionStatus: err});
+        this.setState({hasError: true});
     };
 
     handleChange = (data) => {
@@ -152,6 +152,7 @@ class App extends Component {
             });
 
             let submissionStatus = await response.json();
+            this.setState({submissionStatus});
 
             if (!response.ok) {
                 submissionStatus.type = 'submission';
@@ -217,16 +218,16 @@ class App extends Component {
         } if (hasSuccess) {
             return (
                 <div>
+                    <div id="form-builder-notification" className="alert alert-success" role="alert">
                     <FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.
-                    {submissionStatus.messages && submissionStatus.messages.length > 0 &&
-                        <div id="form-builder-notification" className="alert alert-success" role="alert">
+                        {submissionStatus && submissionStatus.messages && submissionStatus.messages.length > 0 &&
                             <ul>
                                 {submissionStatus.messages.map((item, index) => (
                                     <li key={index}>{item}</li>
                                 ))}
                             </ul>
-                        </div>
-                    }
+                        }
+                    </div>
                     <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}/>
                 </div>
             );
