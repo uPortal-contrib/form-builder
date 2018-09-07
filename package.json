@@ -1,7 +1,7 @@
 {
   "name": "@uportal/form-builder",
   "description": "Create html input forms on the fly",
-  "version": "0.2.5",
+  "version": "1.0.0",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/uPortal-contrib/form-builder.git"
