@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+### Feature
+
+- display success messages after form submission (#42)
+
 ## [0.2.5][] - 2018-09-07
 
 ### Fix
