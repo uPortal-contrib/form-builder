@@ -158,7 +158,10 @@ class App extends Component {
             this.fetchFormData();
 
             let formForward;
-            for (let header of response.headers.entries()) {
+            const entries = response.headers.entries();
+            let header;
+            for (let i = 0; i < entries.length; i++) {
+                header = entries[i];
                 if (header[0] === 'x-fbms-formforward') {
                     formForward = header[1];
                 }
