@@ -22,6 +22,7 @@
   "dependencies": {
     "@fortawesome/react-fontawesome": "^0.1.2",
     "@uportal/open-id-connect": "^1.8.0",
+    "core-js": "^2.5.7",
     "prop-types": "^15.6.1",
     "react": "^16.4.2",
     "react-dom": "^16.4.2",
@@ -41,6 +42,16 @@
     "build": "react-scripts build && shx mv build/static/js/*.js build/static/js/form-builder.js",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
+  },
+  "proxy": {
+    "/uPortal": {
+      "target": "http://localhost:8080",
+      "ws": true
+    },
+    "/fbms": {
+      "target": "http://localhost:8080",
+      "ws": true
+    }
   },
   "renovate": {
     "extends": [
