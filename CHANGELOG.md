@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+## [1.0.1][] - 2018-09-11
+
+### Fix
+
+- allow form builder to be run in Internet Explorer 11 (#44).
+
 ## [1.0.0][] - 2018-09-07
 
 ### Feature
@@ -113,7 +119,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Create README
 - Add Committers
 
-[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.0...HEAD
+[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/uPortal-contrib/form-builder/compare/v0.2.5...v1.0.0
 [0.2.5]: https://github.com/uPortal-contrib/form-builder/compare/v0.2.4...v0.2.5
 [0.2.4]: https://github.com/uPortal-contrib/form-builder/compare/v0.2.3...v0.2.4
