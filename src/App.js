@@ -80,10 +80,11 @@ class App extends Component {
             }
 
             const payload = await response.json();
+            const fbmsFormVersion = payload.version;
             const uiSchema = payload.metadata;
             const schema = payload.schema;
 
-            this.setState({schema, uiSchema});
+            this.setState({fbmsFormVersion, schema, uiSchema});
             this.fetchFormData();
         } catch (err) {
             // error
@@ -123,11 +124,11 @@ class App extends Component {
     };
 
     transformBody = (formData, username) => {
-        const {fbmsFormFname} = this.state;
+        const {fbmsFormFname, fbmsFormVersion} = this.state;
         return {
             username: username,
             formFname: fbmsFormFname,
-            formVersion: 1,
+            formVersion: fbmsFormVersion,
             timestamp: Date.now(),
             answers: formData
         };
