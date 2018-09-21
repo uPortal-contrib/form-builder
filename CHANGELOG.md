@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+## [1.0.3][] - 2018-09-21
+
+### Fix
+
+- Form builder iterator now loops through data correctly (#49)
+
 ## [1.0.2][] - 2018-09-20
 
 ### Fix
@@ -125,7 +131,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Create README
 - Add Committers
 
-[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.2...HEAD
+[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/uPortal-contrib/form-builder/compare/v0.2.5...v1.0.0
