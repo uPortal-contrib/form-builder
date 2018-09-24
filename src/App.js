@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { Component, Fragment } from 'react';
 import Form from "react-jsonschema-form";
 import PropTypes from 'prop-types';
 import oidc from '@uportal/open-id-connect';
@@ -207,6 +207,8 @@ class App extends Component {
         const {schema, uiSchema, formData, hasError, hasSuccess, submissionStatus} = this.state;
         const onSubmit = ({formData}) => this.submitForm(formData);
 
+        const buttonContent = (uiSchema && uiSchema.properties && Object.keys(uiSchema.properties).length > 0) ? <Fragment/> : <div></div>;
+
         if (hasError) {
             return (
                 <div>
@@ -220,7 +222,9 @@ class App extends Component {
                             </ul>
                         }
                     </div>
-                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}/>
+                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}>
+                      {buttonContent}
+                    </Form>
                 </div>
             );
         } if (hasSuccess) {
@@ -236,12 +240,16 @@ class App extends Component {
                             </ul>
                         }
                     </div>
-                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}/>
+                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}>
+                      {buttonContent}
+                    </Form>
                 </div>
             );
         } else {
             return (
-                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} />
+                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}>
+                  {buttonContent}
+                </Form>
             );
         }
     }
