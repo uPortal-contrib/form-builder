@@ -1,3 +1,4 @@
+
 import React, { Component } from 'react';
 import Form from "react-jsonschema-form";
 import PropTypes from 'prop-types';
@@ -207,9 +208,10 @@ class App extends Component {
         const {schema, uiSchema, formData, hasError, hasSuccess, submissionStatus} = this.state;
         const onSubmit = ({formData}) => this.submitForm(formData);
 
-        if (hasError) {
-            return (
-                <div>
+        return (
+            <div>
+                <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"></link>
+                { hasError &&
                     <div id="form-builder-notification" className="alert alert-danger" role="alert">
                         <h3><FontAwesomeIcon icon="exclamation-circle" /> {submissionStatus.messageHeader}</h3>
                         {submissionStatus && submissionStatus.messages && submissionStatus.messages.length > 0 &&
@@ -220,14 +222,10 @@ class App extends Component {
                             </ul>
                         }
                     </div>
-                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}/>
-                </div>
-            );
-        } if (hasSuccess) {
-            return (
-                <div>
+                }
+                { hasSuccess &&
                     <div id="form-builder-notification" className="alert alert-success" role="alert">
-                    <FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.
+                        <FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.
                         {submissionStatus && submissionStatus.messages && submissionStatus.messages.length > 0 &&
                             <ul>
                                 {submissionStatus.messages.map((item, index) => (
@@ -236,14 +234,10 @@ class App extends Component {
                             </ul>
                         }
                     </div>
-                    <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")}/>
-                </div>
-            );
-        } else {
-            return (
+                }
                 <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} />
-            );
-        }
+            </div>
+        );
     }
 }
 
