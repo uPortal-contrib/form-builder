@@ -135,6 +135,14 @@ class App extends Component {
         };
     };
 
+    conditionallyHideSubmit = (schema) => {
+        if (schema.properties && Object.keys(schema.properties).length === 0) {
+            return (
+                ' '
+            )
+        }
+    };
+
     submitForm = async (userFormData) => {
         const {fbmsBaseUrl} = this.props;
         const {fbmsFormFname} = this.state;
@@ -235,7 +243,10 @@ class App extends Component {
                         }
                     </div>
                 }
-                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} />
+
+                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} >
+                    {this.conditionallyHideSubmit(schema)}
+                </Form>
             </div>
         );
     }
