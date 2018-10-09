@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+## [1.1.0][] - 2018-10-09
+
+### Feature
+
+- Support web component spec version 1 (#50).
+- Don't show submit button when no input is requested (#51).
+
 ## [1.0.3][] - 2018-09-21
 
 ### Fix
@@ -131,7 +138,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Create README
 - Add Committers
 
-[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.3...HEAD
+[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.3...v1.1.0
 [1.0.3]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.0...v1.0.1
