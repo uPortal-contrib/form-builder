@@ -244,7 +244,7 @@ class App extends Component {
                     </div>
                 }
 
-                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} >
+                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} safeRenderCompletion={true}>
                     {this.conditionallyHideSubmit(schema)}
                 </Form>
             </div>
