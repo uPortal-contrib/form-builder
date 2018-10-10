@@ -221,7 +221,7 @@ class App extends Component {
                 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"></link>
                 { hasError &&
                     <div id="form-builder-notification" className="alert alert-danger" role="alert">
-                        <h3><FontAwesomeIcon icon="exclamation-circle" /> {submissionStatus.messageHeader}</h3>
+                        <h3><FontAwesomeIcon icon="exclamation-circle" style={{width: '1em'}} /> {submissionStatus.messageHeader}</h3>
                         {submissionStatus && submissionStatus.messages && submissionStatus.messages.length > 0 &&
                             <ul>
                                 {submissionStatus.messages.map((item, index) => (
@@ -233,7 +233,7 @@ class App extends Component {
                 }
                 { hasSuccess &&
                     <div id="form-builder-notification" className="alert alert-success" role="alert">
-                        <FontAwesomeIcon icon="check-circle" /> Your form was successfully submitted.
+                        <FontAwesomeIcon icon="check-circle" style={{width: '1em'}} /> Your form was successfully submitted.
                         {submissionStatus && submissionStatus.messages && submissionStatus.messages.length > 0 &&
                             <ul>
                                 {submissionStatus.messages.map((item, index) => (
