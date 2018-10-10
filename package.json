@@ -25,7 +25,6 @@
     "@uportal/open-id-connect": "^1.8.0",
     "bootstrap": "^4.1.3",
     "core-js": "^2.5.7",
-    "document-register-element": "^1.11.1",
     "prop-types": "^15.6.1",
     "react": "^16.4.2",
     "react-dom": "^16.4.2",
