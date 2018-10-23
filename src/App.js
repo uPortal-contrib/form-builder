@@ -18,11 +18,13 @@ class App extends Component {
     static propTypes = {
         fbmsBaseUrl: PropTypes.string,
         fbmsFormFname: PropTypes.string.isRequired,
-        oidcUrl: PropTypes.string
+        oidcUrl: PropTypes.string,
+        showErrorList: PropTypes.boolean
     };
 
     static defaultProps = {
-        fbmsBaseUrl: '/fbms'
+        fbmsBaseUrl: '/fbms',
+        showErrorList: true
     };
 
     state = {
@@ -273,7 +275,16 @@ class App extends Component {
                     </div>
                 }
 
-                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} transformErrors={this.transformErrors} safeRenderCompletion={true}>
+                <Form
+                        schema={schema}
+                        uiSchema={uiSchema}
+                        formData={formData}
+                        onChange={this.handleChange}
+                        onSubmit={onSubmit}
+                        onError={log("errors")}
+                        showErrorList={this.props.showErrorList}
+                        transformErrors={this.transformErrors}
+                        safeRenderCompletion={true}>
                     {this.conditionallyHideSubmit(schema)}
                 </Form>
             </div>
