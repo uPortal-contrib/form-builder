@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import Form from "react-jsonschema-form";
 import PropTypes from 'prop-types';
 import oidc from '@uportal/open-id-connect';
+import get from 'lodash.get';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faExclamationCircle, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -17,11 +18,13 @@ class App extends Component {
     static propTypes = {
         fbmsBaseUrl: PropTypes.string,
         fbmsFormFname: PropTypes.string.isRequired,
-        oidcUrl: PropTypes.string
+        oidcUrl: PropTypes.string,
+        showErrorList: PropTypes.boolean
     };
 
     static defaultProps = {
-        fbmsBaseUrl: '/fbms'
+        fbmsBaseUrl: '/fbms',
+        showErrorList: true
     };
 
     state = {
@@ -210,6 +213,34 @@ class App extends Component {
         this.fetchSchema();
     };
 
+    /**
+     * Allows any message from a validation rule to be overridden.
+     * Overrides come from a "messages" object, with a property matching the
+     * rule that will be overridden.
+     * For example to override a string pattern, that following schema could be
+     * used.
+     *
+     * "example": {
+     *   "type": "string",
+     *   "pattern": "^[A-Z]{3}$",
+     *   "messages": {
+     *     "pattern": "Must be three upper case letters"
+     *   }
+     * }
+     */
+    transformErrors = (errors) => errors.map((err) => {
+      const {property, name} = err;
+      const {schema} = this.state;
+      const pathParts = property.split('.');
+      const prefix = pathParts.join('.properties.').substring(1); // remove leading period (.)
+      const messageLocation = prefix + '.messages.' + name;
+      const customMessage = get(schema, messageLocation);
+      if (customMessage) {
+        err.message = customMessage;
+      }
+      return err;
+    });
+
     componentDidMount = this.getForm;
 
     render = () => {
@@ -244,7 +275,16 @@ class App extends Component {
                     </div>
                 }
 
-                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} safeRenderCompletion={true}>
+                <Form
+                        schema={schema}
+                        uiSchema={uiSchema}
+                        formData={formData}
+                        onChange={this.handleChange}
+                        onSubmit={onSubmit}
+                        onError={log("errors")}
+                        showErrorList={this.props.showErrorList}
+                        transformErrors={this.transformErrors}
+                        safeRenderCompletion={true}>
                     {this.conditionallyHideSubmit(schema)}
                 </Form>
             </div>
