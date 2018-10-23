@@ -227,13 +227,14 @@ class App extends Component {
      * }
      */
     transformErrors = (errors) => errors.map((err) => {
-      const {schema, schemaPath} = err;
-      const pathParts = schemaPath.split('.');
-      const tail = pathParts.pop();
-      const path = pathParts.concat('messages', tail).join('.');
-      const maybeCustomMessage = get(schema, path);
-      if (maybeCustomMessage) {
-        err.message = maybeCustomMessage;
+      const {property, name} = err;
+      const {schema} = this.state;
+      const pathParts = property.split('.');
+      const prefix = pathParts.join('.properties.').substring(1); // remove leading period (.)
+      const messageLocation = prefix + '.messages.' + name;
+      const customMessage = get(schema, messageLocation);
+      if (customMessage) {
+        err.message = customMessage;
       }
       return err;
     });
