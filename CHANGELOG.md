@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+## [1.2.0][] - 2018-10-23
+
+### Feature
+
+- Support custom validation messages (#58).
+
+```js
+{
+  "example": {
+    "type": "string",
+    "pattern": "^[A-Z]{3}$",
+    "messages": {
+      "pattern": "Must be three upper case letters"
+    }
+  }
+}
+```
+
 ## [1.1.2][] - 2018-10-10
 
 ### Fix
@@ -152,7 +170,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Create README
 - Add Committers
 
-[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.1.2...HEAD
+[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.2.0...HEAD
+[1.1.2]: https://github.com/uPortal-contrib/form-builder/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/uPortal-contrib/form-builder/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/uPortal-contrib/form-builder/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/uPortal-contrib/form-builder/compare/v1.0.3...v1.1.0
