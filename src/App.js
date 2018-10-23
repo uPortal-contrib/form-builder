@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import Form from "react-jsonschema-form";
 import PropTypes from 'prop-types';
 import oidc from '@uportal/open-id-connect';
+import get from 'lodash.get';
 import { library } from '@fortawesome/fontawesome-svg-core';
 import { faExclamationCircle, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -210,6 +211,33 @@ class App extends Component {
         this.fetchSchema();
     };
 
+    /**
+     * Allows any message from a validation rule to be overridden.
+     * Overrides come from a "messages" object, with a property matching the
+     * rule that will be overridden.
+     * For example to override a string pattern, that following schema could be
+     * used.
+     *
+     * "example": {
+     *   "type": "string",
+     *   "pattern": "^[A-Z]{3}$",
+     *   "messages": {
+     *     "pattern": "Must be three upper case letters"
+     *   }
+     * }
+     */
+    transformErrors = (errors) => errors.map((err) => {
+      const {schema, schemaPath} = err;
+      const pathParts = schemaPath.split('.');
+      const tail = pathParts.pop();
+      const path = pathParts.concat('messages', tail).join('.');
+      const maybeCustomMessage = get(schema, path);
+      if (maybeCustomMessage) {
+        err.message = maybeCustomMessage;
+      }
+      return err;
+    });
+
     componentDidMount = this.getForm;
 
     render = () => {
@@ -244,7 +272,7 @@ class App extends Component {
                     </div>
                 }
 
-                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} safeRenderCompletion={true}>
+                <Form schema={schema} uiSchema={uiSchema} formData={formData} onChange={this.handleChange} onSubmit={onSubmit} onError={log("errors")} transformErrors={this.transformErrors} safeRenderCompletion={true}>
                     {this.conditionallyHideSubmit(schema)}
                 </Form>
             </div>
