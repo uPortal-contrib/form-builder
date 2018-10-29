@@ -101,8 +101,12 @@ class App extends Component {
         const {fbmsBaseUrl} = this.props;
         const {fbmsFormFname} = this.state;
 
+        // Add a random query string token to the URL to get around the way
+        // Safari caches content, despite explicit Cache-Control header settings.
+        const submissionUrl = fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname + '?safarifix=' + Math.random();
+
         try {
-            const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
+            const response = await fetch(submissionUrl, {
                 credentials: 'same-origin',
                 headers: {
                     'Authorization': 'Bearer ' + (await this.getToken()).encoded,
