@@ -11,3 +11,4 @@ config.optimization.splitChunks = {
 };
 
 config.optimization.runtimeChunk = false;
+config.output.filename = 'static/js/form-builder.js';

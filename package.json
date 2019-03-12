@@ -36,13 +36,12 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.0",
     "@fortawesome/free-solid-svg-icons": "^5.1.0",
     "react-scripts": "2.1.5",
-    "rewire": "^4.0.1",
-    "shx": "^0.3.1"
+    "rewire": "^4.0.1"
   },
   "scripts": {
     "prepublishOnly": "npm run build",
     "start": "react-scripts start",
-    "build": "./scripts/build-non-split.js && shx mv build/static/js/*.js build/static/js/form-builder.js",
+    "build": "./scripts/build-non-split.js",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
   },
