@@ -19,7 +19,7 @@ class App extends Component {
         fbmsBaseUrl: PropTypes.string,
         fbmsFormFname: PropTypes.string.isRequired,
         oidcUrl: PropTypes.string,
-        showErrorList: PropTypes.boolean
+        showErrorList: PropTypes.bool
     };
 
     static defaultProps = {

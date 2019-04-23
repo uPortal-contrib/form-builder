@@ -30,30 +30,20 @@
     "react-dom": "^16.4.2",
     "react-jsonschema-form": "^1.0.3",
     "reactstrap": "^7.1.0",
-    "regenerator-runtime": "^0.12.1"
+    "regenerator-runtime": "^0.13.0"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-svg-core": "^1.2.0",
     "@fortawesome/free-solid-svg-icons": "^5.1.0",
-    "react-scripts": "1.1.5",
-    "shx": "^0.3.1"
+    "react-scripts": "2.1.5",
+    "rewire": "^4.0.1"
   },
   "scripts": {
     "prepublishOnly": "npm run build",
     "start": "react-scripts start",
-    "build": "react-scripts build && shx mv build/static/js/*.js build/static/js/form-builder.js",
+    "build": "./scripts/build-non-split.js",
     "test": "react-scripts test --env=jsdom",
     "eject": "react-scripts eject"
-  },
-  "proxy": {
-    "/uPortal": {
-      "target": "http://localhost:8080",
-      "ws": true
-    },
-    "/fbms": {
-      "target": "http://localhost:8080",
-      "ws": true
-    }
   },
   "renovate": {
     "extends": [
@@ -65,5 +55,11 @@
       ":ignoreUnstable",
       ":renovatePrefix"
     ]
-  }
+  },
+  "browserslist": [
+    ">0.2%",
+    "not dead",
+    "not ie <= 11",
+    "not op_mini all"
+  ]
 }
