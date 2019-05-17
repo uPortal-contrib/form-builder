@@ -254,9 +254,9 @@ class App extends Component {
 	
         // this.props.children come through as a DocumentFragment, 
         // and cannot be added directly as a React element.
-        let tempElem = document.createElement("div");
+        const tempElem = document.createElement("div");
         tempElem.appendChild(this.props.children);
-        let childrenHtmlStr = tempElem.innerHTML;
+        const childrenHtmlStr = tempElem.innerHTML;
         console.log("this.props.children is: ["+ childrenHtmlStr + "]");
 
         return (
