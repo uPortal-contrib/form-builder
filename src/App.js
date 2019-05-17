@@ -8,6 +8,7 @@ import { library } from '@fortawesome/fontawesome-svg-core';
 import { faExclamationCircle, faCheckCircle } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import 'regenerator-runtime/runtime';
+import ReactHtmlParser from 'react-html-parser';
 
 library.add(faExclamationCircle, faCheckCircle);
 
@@ -255,12 +256,12 @@ class App extends Component {
         // and cannot be added directly as a React element.
         let tempElem = document.createElement("div");
         tempElem.appendChild(this.props.children);
-	let childrenHtmlStr = tempElem.innerHTML;
-	console.log("this.props.children is: ["+ childrenHtmlStr + "]");
+        let childrenHtmlStr = tempElem.innerHTML;
+        console.log("this.props.children is: ["+ childrenHtmlStr + "]");
 
         return (
             <div>
-		<div dangerouslySetInnerHTML={{__html: childrenHtmlStr}}/>
+		{ ReactHtmlParser(childrenHtmlStr) }
                 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"></link>
                 { hasError &&
                     <div id="form-builder-notification" className="alert alert-danger" role="alert">

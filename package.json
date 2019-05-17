@@ -28,6 +28,7 @@
     "prop-types": "^15.6.1",
     "react": "^16.4.2",
     "react-dom": "^16.4.2",
+    "react-html-parser": "^2.0.2",
     "react-jsonschema-form": "^1.0.3",
     "reactstrap": "^7.1.0",
     "regenerator-runtime": "^0.13.0"
