@@ -250,9 +250,17 @@ class App extends Component {
     render = () => {
         const {schema, uiSchema, formData, hasError, hasSuccess, submissionStatus} = this.state;
         const onSubmit = ({formData}) => this.submitForm(formData);
+	
+        // this.props.children come through as a DocumentFragment, 
+        // and cannot be added directly as a React element.
+        let tempElem = document.createElement("div");
+        tempElem.appendChild(this.props.children);
+	let childrenHtmlStr = tempElem.innerHTML;
+	console.log("this.props.children is: ["+ childrenHtmlStr + "]");
 
         return (
             <div>
+		<div dangerouslySetInnerHTML={{__html: childrenHtmlStr}}/>
                 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"></link>
                 { hasError &&
                     <div id="form-builder-notification" className="alert alert-danger" role="alert">
