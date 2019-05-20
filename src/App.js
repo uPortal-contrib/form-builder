@@ -19,7 +19,8 @@ class App extends Component {
         fbmsBaseUrl: PropTypes.string,
         fbmsFormFname: PropTypes.string.isRequired,
         oidcUrl: PropTypes.string,
-        showErrorList: PropTypes.bool
+        showErrorList: PropTypes.bool,
+        styles: PropTypes.string
     };
 
     static defaultProps = {
@@ -253,6 +254,7 @@ class App extends Component {
 
         return (
             <div>
+                <style>{this.props.styles}</style>
                 <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css"></link>
                 { hasError &&
                     <div id="form-builder-notification" className="alert alert-danger" role="alert">
