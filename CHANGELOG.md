@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+## [1.3.0][] - 2019-05-21
+
+### Feature
+
+* add `styles` option for custom form styling 
+
+### Chore
+
+* Update dependencies (#52, #61)
+
 ## [1.2.1][] - 2018-10-29
 
 ### Fix
@@ -175,7 +185,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Create README
 - Add Committers
 
-[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.2.1...HEAD
+[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/uPortal-contrib/form-builder/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/uPortal-contrib/form-builder/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/uPortal-contrib/form-builder/compare/v1.1.2...v1.2.0
 [1.1.2]: https://github.com/uPortal-contrib/form-builder/compare/v1.1.1...v1.1.2
