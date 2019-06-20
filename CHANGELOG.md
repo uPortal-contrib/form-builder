@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+## [1.3.1][] - 2019-06-20
+
+### Fix
+
+- Ensure IE and Edge are included in babel `browserslist` (#67)
+
+### Chore
+
+- update dependencies (#62)
+
+
 ## [1.3.0][] - 2019-05-21
 
 ### Feature
@@ -185,7 +196,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Create README
 - Add Committers
 
-[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.3.0...HEAD
+[unreleased]: https://github.com/uPortal-contrib/form-builder/compare/v1.3.1...HEAD
+[1.3.1]: https://github.com/uPortal-contrib/form-builder/compare/v1.3.0...v1.3.1
 [1.3.0]: https://github.com/uPortal-contrib/form-builder/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/uPortal-contrib/form-builder/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/uPortal-contrib/form-builder/compare/v1.1.2...v1.2.0
