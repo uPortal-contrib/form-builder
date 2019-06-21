@@ -28,7 +28,7 @@
     "prop-types": "^15.6.1",
     "react": "^16.4.2",
     "react-dom": "^16.4.2",
-    "react-jsonschema-form": "^1.0.3",
+    "react-jsonschema-form": "1.2.1",
     "regenerator-runtime": "^0.13.0"
   },
   "devDependencies": {
