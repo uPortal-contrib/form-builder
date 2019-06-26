@@ -18,7 +18,8 @@ npm install @uportal/form-builder
 <form-builder
     fbms-base-url="/fbms"
     fbms-form-fname="communication-preferences"
-    oidc-url="/uPortal/api/v5-1/userinfo">
+    oidc-url="/uPortal/api/v5-1/userinfo"
+    styles="div {color:grey} span {color:orange}">
 </form-builder>
 ```
 
@@ -27,6 +28,7 @@ npm install @uportal/form-builder
 - **fbms-base-url**: Base URL of the form builder micro service.
 - **fbms-form-fname**: Form name that is appended to the fbms-base-url.
 - **oidc-url**: Open ID Connect URL to authenticate requests.
+- **styles**: Optional pass-through value to an HTML `style` tag in the render method.
 
 ## Resources
 
