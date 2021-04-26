@@ -34,7 +34,7 @@
   "devDependencies": {
     "@fortawesome/fontawesome-svg-core": "^1.2.0",
     "@fortawesome/free-solid-svg-icons": "^5.1.0",
-    "react-scripts": "2.1.5",
+    "react-scripts": "3.4.2",
     "rewire": "^4.0.1"
   },
   "scripts": {
