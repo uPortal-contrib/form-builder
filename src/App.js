@@ -32,6 +32,7 @@ class App extends Component {
         schema: {},
         uiSchema: {},
         formData: {},
+        processing: false,
         hasError: false,
         submissionStatus: {},
         hasSuccess: false,
@@ -40,7 +41,7 @@ class App extends Component {
 
     handleOidcError = (err) => {
         console.error(err);
-        this.setState({hasError: true, errorMessage: 'There was a problem authorizing this request.'});
+        this.setState({hasError: true, errorMessage: 'There was a problem authorizing this request.', processing: false});
     };
 
     handleFbmsError = (err) => {
@@ -50,7 +51,7 @@ class App extends Component {
             err.messageHeader = 'There was a problem finding your form.';
         }
 
-        this.setState({hasError: true});
+        this.setState({hasError: true, processing: false});
     };
 
     handleChange = (data) => {
@@ -69,6 +70,7 @@ class App extends Component {
     };
 
     fetchSchema = async () => {
+        console.log('got here');
         const {fbmsBaseUrl} = this.props;
         const {fbmsFormFname} = this.state;
         try {
@@ -156,7 +158,7 @@ class App extends Component {
         const {fbmsFormFname} = this.state;
         const token = await this.getToken();
         const body = this.transformBody(userFormData, token.decoded.sub);
-        this.setState({hasError: false});
+        this.setState({hasError: false, processing: true});
 
         try {
             const response = await fetch(fbmsBaseUrl + '/api/v1/submissions/' + fbmsFormFname, {
@@ -199,7 +201,7 @@ class App extends Component {
                 this.getForm();
             }
 
-            this.setState({hasSuccess: true});
+            this.setState({hasSuccess: true, processing: false});
             this.scrollToNotification();
         } catch (err) {
             console.error(err);
@@ -249,7 +251,7 @@ class App extends Component {
     componentDidMount = this.getForm;
 
     render = () => {
-        const {schema, uiSchema, formData, hasError, hasSuccess, submissionStatus} = this.state;
+        const {schema, uiSchema, formData, processing, hasError, hasSuccess, submissionStatus} = this.state;
         const onSubmit = ({formData}) => this.submitForm(formData);
 
         return (
