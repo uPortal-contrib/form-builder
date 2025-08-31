@@ -23,7 +23,7 @@
     "@christianmurphy/reactive-elements": "^1.0.3",
     "@fortawesome/react-fontawesome": "^0.1.2",
     "@uportal/open-id-connect": "^1.8.0",
-    "bootstrap": "^4.3.1",
+    "bootstrap": "^5.0.0",
     "lodash.get": "^4.4.2",
     "prop-types": "^15.6.1",
     "react": "^16.4.2",
