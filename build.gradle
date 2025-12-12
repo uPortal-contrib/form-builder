@@ -1,0 +1,30 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+}
+
+def jsonFile = file("${projectDir}/package.json")
+def parsedJson = new groovy.json.JsonSlurper().parseText(jsonFile.text)
+version = "${parsedJson.version}-SNAPSHOT"
+/* remove '-SNAPSHOT' for release version */
+
+tasks.named('jar', Jar) {
+    archiveBaseName.set(project.name)
+
+    from('.') {
+        // Put selected files under the webjars path inside the jar
+        into "META-INF/resources/webjars/uportal__${project.name}/${version}"
+        include "build/static/js/${project.name}.js"
+    }
+}
+
+publishing {
+  publications {
+    mavenJava(MavenPublication) {
+      from components.java
+      groupId = group
+      artifactId = "uportal__${project.name}"
+      version = version
+    }
+  }
+}

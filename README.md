@@ -10,6 +10,16 @@
 
 ```bash
 npm install @uportal/form-builder
+
+```
+
+## Publish to local Maven cache (~/.m2/repository)
+
+To create a Jar of the built web component and publish to cache, run:
+
+```bash
+./gradlew jar
+./gradlew publishToMavenLocal
 ```
 
 ## Usage
