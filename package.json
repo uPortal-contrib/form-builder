@@ -7,8 +7,9 @@
     "url": "git+https://github.com/uPortal-contrib/form-builder.git"
   },
   "files": [
-    "build",
-    "src"
+    "build/static/js/form-builder.js",
+    "LICENSE",
+    "README.md"
   ],
   "author": "Apereo <uportal-dev@apereo.org>",
   "license": "Apache-2.0",
