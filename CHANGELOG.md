@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased][]
 
+### Feature
+
+    - Migrate to lit (#91)
+    - Add gradle for local webjar (#90)
+
 ## [1.3.2][] - 2019-06-21
 
 ### Fix
