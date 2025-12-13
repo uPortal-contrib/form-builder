@@ -15,7 +15,7 @@ tasks.named('jar', Jar) {
         // Put selected files under the webjars path inside the jar
         //into "META-INF/resources/webjars/uportal__${project.name}/${version}"
         //include "build/static/js/${project.name}.js"
-        into "META-INF/resources/webjars/uportal__${project.name}/${version}/build/static/js"
+        into "META-INF/resources/webjars/uportal__${project.name}/${version}"
         include "dist/*"
     }
 }

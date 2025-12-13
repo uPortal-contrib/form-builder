@@ -1,4 +1,9 @@
 import { LitElement, html, css } from 'lit';
+import decode from 'jwt-decode';
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
 /**
  * Dynamic Form Builder Web Component
@@ -11,20 +16,23 @@ import { LitElement, html, css } from 'lit';
  * @attr {string} oidc-url - OpenID Connect URL for authentication
  * @attr {string} styles - Optional custom CSS styles
  */
-export class FormBuilder extends LitElement {
+class FormBuilder extends LitElement {
   static properties = {
     fbmsBaseUrl: { type: String, attribute: 'fbms-base-url' },
     fbmsFormFname: { type: String, attribute: 'fbms-form-fname' },
     oidcUrl: { type: String, attribute: 'oidc-url' },
     customStyles: { type: String, attribute: 'styles' },
-    
+
     // Internal state
     schema: { type: Object, state: true },
     formData: { type: Object, state: true },
     uiSchema: { type: Object, state: true },
+    fbmsFormVersion: { type: String, state: true },
     loading: { type: Boolean, state: true },
+    submitting: { type: Boolean, state: true },
     error: { type: String, state: true },
     token: { type: String, state: true },
+    decoded: { type: Object, state: true },
   };
 
   static styles = css`
@@ -161,7 +169,7 @@ export class FormBuilder extends LitElement {
     }
 
     button[type="button"] {
-      background-color: #f0f0f0;
+      background-color: #c0c0c0;
       color: #333;
     }
 
@@ -173,16 +181,41 @@ export class FormBuilder extends LitElement {
       opacity: 0.5;
       cursor: not-allowed;
     }
+
+    .spinner {
+      display: inline-block;
+      width: 1em;
+      height: 1em;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: white;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .button-content {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
   `;
 
   constructor() {
     super();
     this.loading = true;
+    this.submitting = false;
     this.error = null;
     this.schema = null;
     this.formData = {};
     this.uiSchema = null;
+    this.fbmsFormVersion = null;
     this.token = null;
+    this.decoded = {sub: 'unknown'};
     this.fieldErrors = {};
   }
 
@@ -219,13 +252,14 @@ export class FormBuilder extends LitElement {
       const response = await fetch(this.oidcUrl, {
         credentials: 'include',
       });
-      
+
       if (!response.ok) {
         throw new Error('Failed to authenticate');
       }
 
-      const data = await response.json();
-      this.token = data.token || data.access_token;
+      const data = await response.text();
+      this.token = data
+      this.decoded = decode(this.token);
     } catch (err) {
       console.error('Token fetch error:', err);
       throw new Error('Authentication failed');
@@ -233,15 +267,17 @@ export class FormBuilder extends LitElement {
   }
 
   async fetchSchema() {
-    const url = `${this.fbmsBaseUrl}/api/v1/forms/${this.fbmsFormFname}/schema`;
-    const headers = {};
-    
+    const url = `${this.fbmsBaseUrl}/api/v1/forms/${this.fbmsFormFname}`;
+    const headers = {
+      'content-type': 'application/jwt',
+    };
+
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
     const response = await fetch(url, {
-      credentials: 'include',
+      credentials: 'same-origin',
       headers,
     });
 
@@ -250,26 +286,30 @@ export class FormBuilder extends LitElement {
     }
 
     const data = await response.json();
+    this.fbmsFormVersion = data.version;
     this.schema = data.schema || data;
-    this.uiSchema = data.uiSchema;
+    this.uiSchema = data.metadata;
   }
 
   async fetchFormData() {
-    const url = `${this.fbmsBaseUrl}/api/v1/forms/${this.fbmsFormFname}/data`;
-    const headers = {};
-    
+    const url = `${this.fbmsBaseUrl}/api/v1/submissions/${this.fbmsFormFname}?safarifix=${Math.random()}`;
+    const headers = {
+      'content-type': 'application/jwt',
+    };
+
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }
 
     try {
       const response = await fetch(url, {
-        credentials: 'include',
+        credentials: 'same-origin',
         headers,
       });
 
       if (response.ok) {
-        this.formData = await response.json();
+        const payload = await response.json();
+        this.formData = payload.answers;
       } else {
         // It's OK if there's no existing data
         this.formData = {};
@@ -283,7 +323,7 @@ export class FormBuilder extends LitElement {
 
   handleInputChange(fieldName, event) {
     const { type, value, checked } = event.target;
-    
+
     this.formData = {
       ...this.formData,
       [fieldName]: type === 'checkbox' ? checked : value,
@@ -300,7 +340,7 @@ export class FormBuilder extends LitElement {
     const currentArray = this.formData[fieldName] || [];
     const newArray = [...currentArray];
     newArray[index] = event.target.value;
-    
+
     this.formData = {
       ...this.formData,
       [fieldName]: newArray,
@@ -322,7 +362,7 @@ export class FormBuilder extends LitElement {
     // Type validation
     Object.entries(properties).forEach(([fieldName, fieldSchema]) => {
       const value = this.formData[fieldName];
-      
+
       if (value !== undefined && value !== null && value !== '') {
         // Email validation
         if (fieldSchema.format === 'email') {
@@ -371,10 +411,26 @@ export class FormBuilder extends LitElement {
       return;
     }
 
+    // Prevent double-submission
+    if (this.submitting) {
+      return;
+    }
+
     try {
-      const url = `${this.fbmsBaseUrl}/api/v1/forms/${this.fbmsFormFname}/data`;
+      this.submitting = true;
+      this.error = null;
+      const body = {
+        username: this.decoded.sub,
+        formFname: this.fbmsFormFname,
+        formVersion: this.fbmsFormVersion,
+        timestamp: Date.now(),
+        answers: this.formData
+      };
+      await delay(300);
+
+      const url = `${this.fbmsBaseUrl}/api/v1/submissions/${this.fbmsFormFname}`;
       const headers = {
-        'Content-Type': 'application/json',
+        'content-type': 'application/json',
       };
 
       if (this.token) {
@@ -383,9 +439,9 @@ export class FormBuilder extends LitElement {
 
       const response = await fetch(url, {
         method: 'POST',
-        credentials: 'include',
+        credentials: 'same-origin',
         headers,
-        body: JSON.stringify(this.formData),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {
@@ -394,7 +450,7 @@ export class FormBuilder extends LitElement {
 
       // Dispatch success event
       this.dispatchEvent(new CustomEvent('form-submit-success', {
-        detail: { data: this.formData },
+        detail: { data: body },
         bubbles: true,
         composed: true,
       }));
@@ -403,12 +459,14 @@ export class FormBuilder extends LitElement {
       this.error = null;
     } catch (err) {
       this.error = err.message || 'Failed to submit form';
-      
+
       this.dispatchEvent(new CustomEvent('form-submit-error', {
         detail: { error: err.message },
         bubbles: true,
         composed: true,
       }));
+    } finally {
+      this.submitting = false;
     }
   }
 
@@ -429,7 +487,7 @@ export class FormBuilder extends LitElement {
         <label class="${required ? 'required' : ''}" for="${fieldName}">
           ${fieldSchema.title || fieldName}
         </label>
-        
+
         ${fieldSchema.description ? html`
           <span class="description">${fieldSchema.description}</span>
         ` : ''}
@@ -585,7 +643,7 @@ export class FormBuilder extends LitElement {
 
     return html`
       ${this.customStyles ? html`<style>${this.customStyles}</style>` : ''}
-      
+
       <div class="container">
         <form @submit="${this.handleSubmit}">
           ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
@@ -596,8 +654,15 @@ export class FormBuilder extends LitElement {
           )}
 
           <div class="buttons">
-            <button type="submit">Submit</button>
-            <button type="button" @click="${this.handleReset}">Reset</button>
+            <button type="submit" ?disabled="${this.submitting}">
+              <span class="button-content">
+                ${this.submitting ? html`<span class="spinner"></span>` : ''}
+                ${this.submitting ? 'Submitting...' : 'Submit'}
+              </span>
+            </button>
+            <button type="button" @click="${this.handleReset}" ?disabled="${this.submitting}">
+              Reset
+            </button>
           </div>
         </form>
       </div>
