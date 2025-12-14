@@ -2,7 +2,7 @@
 
 ## Project Lead
 
-Chris Paraiso @cparaiso
+Benito Gonzalez @bjagg
 
 ## Committers
 

@@ -132,7 +132,8 @@ describe("FormBuilder", () => {
     });
 
     it("should render error state on fetch failure", async () => {
-      fetchStub.rejects(new Error("Network error"));
+      const errorMsg = "Network error";
+      fetchStub.rejects(new Error(errorMsg));
 
       element = await fixture(html`
         <form-builder
@@ -141,11 +142,13 @@ describe("FormBuilder", () => {
         ></form-builder>
       `);
 
-      await waitUntil(() => element.error);
+      await waitUntil(() => !element.loading && element.error);
 
       const errorDiv = element.shadowRoot.querySelector(".error");
       expect(errorDiv).to.exist;
-      expect(errorDiv.textContent).to.include("Failed to initialize form");
+      expect(errorDiv.textContent).to.include("Error:");
+      expect(errorDiv.textContent).to.include(errorMsg);
+      expect(element.error).to.equal(errorMsg);
     });
   });
 
@@ -431,9 +434,6 @@ describe("FormBuilder", () => {
       expect(url).to.equal("/api/api/v1/submissions/test-form");
       expect(options.method).to.equal("POST");
       const respBody = JSON.parse(options.body);
-      console.log(respBody);
-      console.log("respBody.data");
-      console.log(respBody.data);
       expect(respBody.answers).to.deep.equal(element.formData);
       expect(respBody.formFname).to.equal("test-form");
       expect(respBody.formVersion).to.equal(1);

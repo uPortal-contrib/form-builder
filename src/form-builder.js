@@ -635,18 +635,18 @@ class FormBuilder extends LitElement {
   }
 
   render() {
-    if (this.loading) {
-      return html`
-        <div class="container">
-          <div class="loading">Loading form...</div>
-        </div>
-      `;
-    }
-
     if (this.error) {
       return html`
         <div class="container">
           <div class="error"><strong>Error:</strong> ${this.error}</div>
+        </div>
+      `;
+    }
+
+    if (this.loading) {
+      return html`
+        <div class="container">
+          <div class="loading">Loading form...</div>
         </div>
       `;
     }
