@@ -70,14 +70,14 @@ jobs:
 
       - name: Check build output exists
         run: |
-          if [ ! -f "dist/your-component.js" ]; then
+          if [ ! -f "dist/form-builder.js" ]; then
             echo "Build output not found!"
             exit 1
           fi
 
       - name: Check bundle size
         run: |
-          SIZE=$(stat -f%z "dist/your-component.js" 2>/dev/null || stat -c%s "dist/your-component.js")
+          SIZE=$(stat -f%z "dist/form-builder.js" 2>/dev/null || stat -c%s "dist/form-builder.js")
           echo "Bundle size: $SIZE bytes"
           if [ $SIZE -gt 50000 ]; then
             echo "Warning: Bundle size exceeds 50KB"
