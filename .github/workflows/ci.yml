@@ -11,19 +11,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run Prettier check
         run: npm run link:check
-      
+
       - name: Run ESLint
         run: npm run lint
 
@@ -31,19 +31,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Run tests
         run: npm test:ci
-      
+
       - name: Upload coverage
         uses: codecov/codecov-action@v3
         if: success()
@@ -55,26 +55,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      
+
       - name: Install dependencies
         run: npm ci
-      
+
       - name: Build
         run: npm run build
-      
+
       - name: Check build output exists
         run: |
           if [ ! -f "dist/your-component.js" ]; then
             echo "Build output not found!"
             exit 1
           fi
-      
+
       - name: Check bundle size
         run: |
           SIZE=$(stat -f%z "dist/your-component.js" 2>/dev/null || stat -c%s "dist/your-component.js")

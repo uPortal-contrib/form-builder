@@ -3,7 +3,7 @@ import { playwrightLauncher } from '@web/test-runner-playwright';
 export default {
   files: 'test/**/*.test.js',
   nodeResolve: true,
-  
+
   // Test framework
   testFramework: {
     config: {
@@ -32,7 +32,7 @@ export default {
   },
 
   // Test isolation
-  testRunnerHtml: testFramework =>
+  testRunnerHtml: (testFramework) =>
     `<!DOCTYPE html>
     <html>
       <head>
