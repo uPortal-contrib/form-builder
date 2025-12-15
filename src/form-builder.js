@@ -257,10 +257,9 @@ class FormBuilder extends LitElement {
       this.token = data;
       try {
         this.decoded = decode(this.token);
-      } catch (err) {
+      } catch (_err) {
         // Only need this to get the name, so warn
         console.warn('Security Token failed to decode -- setting user to unknown');
-        console.warn(err.message);
         this.decoded = { sub: 'unknown' };
       }
     } catch (err) {
@@ -292,7 +291,6 @@ class FormBuilder extends LitElement {
     this.fbmsFormVersion = data.version;
     this.schema = data.schema || data;
     this.uiSchema = data.metadata;
-    //console.log(data);
   }
 
   async fetchFormData() {

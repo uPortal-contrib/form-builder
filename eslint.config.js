@@ -22,7 +22,7 @@ export default defineConfig([
     rules: {
       ...js.configs.recommended.rules,
       // Code quality
-      'no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      'no-unused-vars': ['error', { argsIgnorePattern: '^_', caughtErrorsIgnorePattern: '^_' }],
       'no-console': ['warn', { allow: ['warn', 'error'] }],
 
       // Formatting (complement Prettier)
