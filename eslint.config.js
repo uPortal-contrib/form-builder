@@ -37,6 +37,18 @@ export default defineConfig([
     },
   },
 
+  // Test files - add Mocha globals
+  {
+    files: ['**/*.test.js', '**/*.spec.js', 'test/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.es2021,
+        ...globals.mocha, // Adds describe, it, beforeEach, afterEach, etc.
+      },
+    },
+  },
+
   { files: ['**/*.json'], plugins: { json }, language: 'json/json', extends: ['json/recommended'] },
   {
     files: ['**/*.jsonc'],
