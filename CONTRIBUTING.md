@@ -1,4 +1,4 @@
-# Contributing to [Project Name]
+# Contributing to [Form Builder](https://github.com/uPortal-contrib/Form-Builder)
 
 Thank you for your interest in contributing! This document provides guidelines and instructions for contributing to this project.
 
