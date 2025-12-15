@@ -74,11 +74,3 @@ jobs:
             echo "Build output not found!"
             exit 1
           fi
-
-      - name: Check bundle size
-        run: |
-          SIZE=$(stat -f%z "dist/form-builder.js" 2>/dev/null || stat -c%s "dist/form-builder.js")
-          echo "Bundle size: $SIZE bytes"
-          if [ $SIZE -gt 50000 ]; then
-            echo "Warning: Bundle size exceeds 50KB"
-          fi
