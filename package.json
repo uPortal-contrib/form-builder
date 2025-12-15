@@ -64,6 +64,7 @@
     "prettier": "^3.2.4",
     "rollup": "^4.9.5",
     "rollup-plugin-summary": "^2.0.0",
+    "rollup-plugin-visualizer": "^6.0.5",
     "sinon": "^17.0.1"
   },
   "repository": {

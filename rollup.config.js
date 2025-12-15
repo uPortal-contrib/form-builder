@@ -1,6 +1,7 @@
 import { nodeResolve } from '@rollup/plugin-node-resolve';
 import terser from '@rollup/plugin-terser';
 import summary from 'rollup-plugin-summary';
+import { visualizer } from 'rollup-plugin-visualizer';
 
 export default {
   input: 'src/form-builder.js',
@@ -22,5 +23,10 @@ export default {
     nodeResolve(),
     // Print bundle summary
     summary(),
+    // visuals
+    visualizer({
+      template: 'sunburst',
+      gzipSize: true,
+    }),
   ],
 };
