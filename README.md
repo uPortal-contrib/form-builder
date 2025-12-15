@@ -26,10 +26,11 @@ To create a Jar of the built web component and publish to cache, run:
 
 ```html
 <form-builder
-    fbms-base-url="/fbms"
-    fbms-form-fname="communication-preferences"
-    oidc-url="/uPortal/api/v5-1/userinfo"
-    styles="div {color:grey} span {color:orange}">
+  fbms-base-url="/fbms"
+  fbms-form-fname="communication-preferences"
+  oidc-url="/uPortal/api/v5-1/userinfo"
+  styles="div {color:grey} span {color:orange}"
+>
 </form-builder>
 ```
 

@@ -28,16 +28,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - update dependencies (#62)
 
-
 ## [1.3.0][] - 2019-05-21
 
 ### Feature
 
-* add `styles` option for custom form styling 
+- add `styles` option for custom form styling
 
 ### Chore
 
-* Update dependencies (#52, #61)
+- Update dependencies (#52, #61)
 
 ## [1.2.1][] - 2018-10-29
 
