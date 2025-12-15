@@ -39,12 +39,6 @@ This is a Lit-based web component project. We've recently migrated from React to
 
    This will automatically set up Git hooks via Husky.
 
-   ```bash
-   npm run build
-   npm test
-   npm run serve
-   ```
-
 3. **Verify your setup**:
    ```bash
    npm run build
