@@ -88,21 +88,25 @@ We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for gu
 ## Resources
 
 ### Lit Framework
+
 - [Lit Documentation](https://lit.dev/docs/) - Official Lit documentation
 - [Lit Tutorial](https://lit.dev/tutorials/intro-to-lit/) - Getting started with Lit
 - [Lit Playground](https://lit.dev/playground/) - Try Lit in your browser
 - [Lit Best Practices](https://lit.dev/docs/components/best-practices/) - Component patterns
 
 ### Testing
+
 - [Web Test Runner](https://modern-web.dev/docs/test-runner/overview/) - Our test framework
 - [Testing Lit Components](https://lit.dev/docs/tools/testing/) - Lit-specific testing guide
 - [Open WC Testing](https://open-wc.org/docs/testing/testing-package/) - Testing utilities and helpers
 
 ### Web Standards
+
 - [Web Components on MDN](https://developer.mozilla.org/en-US/docs/Web/Web_Components) - Web Components fundamentals
 - [Custom Elements Everywhere](https://custom-elements-everywhere.com/) - Framework compatibility
 
 ### Related Projects
+
 - [Form Builder Microservice](https://github.com/drewwills/fbms) - Backend service for form definitions
 
 ## License
