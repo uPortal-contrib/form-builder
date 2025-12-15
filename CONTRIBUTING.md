@@ -71,6 +71,9 @@ We use automated tooling to maintain consistent code style across the project.
 - Semicolons required
 - 100 character line length
 - ES6+ JavaScript features encouraged
+- LF (Unix) line endings
+- No trailing whitespace
+- Single blank line at end of files
 
 ### Manual Formatting
 
