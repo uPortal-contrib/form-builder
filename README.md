@@ -57,10 +57,6 @@ To create a Jar of the built web component and publish to cache, run:
 # Install dependencies
 npm install
 
-# Install pre-commit hooks
-pip install pre-commit
-pre-commit install
-
 # Start development server
 npm run serve
 

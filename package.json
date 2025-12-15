@@ -18,7 +18,18 @@
     "test:ci": "wtr --coverage",
     "lint": "eslint src/**/*.js",
     "lint:check": "prettier --check 'src/**/*.{js,css}' 'test/**/*.{js,html}' '*.{json,md}'",
-    "format": "prettier --write 'src/**/*.{js,css}' 'test/**/*.{js,html}' '*.{json,md}'"
+    "format": "prettier --write 'src/**/*.{js,css}' 'test/**/*.{js,html}' '*.{json,md}'",
+    "prepare": "husky",
+    "pre-commit": "lint-staged"
+  },
+  "lint-staged": {
+    "*.js": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "*.{json,md,css,html}": [
+      "prettier --write"
+    ]
   },
   "keywords": [
     "web-components",
@@ -31,8 +42,8 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "lit": "^3.1.0",
-    "jwt-decode": "^3.0.0"
+    "jwt-decode": "^3.0.0",
+    "lit": "^3.1.0"
   },
   "devDependencies": {
     "@open-wc/testing": "^4.0.0",
@@ -42,6 +53,8 @@
     "@web/test-runner": "^0.18.0",
     "@web/test-runner-playwright": "^0.11.0",
     "eslint": "^8.56.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.2.4",
     "rollup": "^4.9.5",
     "rollup-plugin-summary": "^2.0.0",

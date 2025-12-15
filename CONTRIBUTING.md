@@ -21,7 +21,6 @@ This is a Lit-based web component project. We've recently migrated from React to
 - Node.js 18 or higher
 - npm 9 or higher
 - Git
-- Python 3.7+ (for pre-commit hooks)
 
 ## Development Setup
 
@@ -38,14 +37,15 @@ This is a Lit-based web component project. We've recently migrated from React to
    npm install
    ```
 
-3. **Install pre-commit hooks**:
+   This will automatically set up Git hooks via Husky.
 
    ```bash
-   pip install pre-commit
-   pre-commit install
+   npm run build
+   npm test
+   npm run serve
    ```
 
-4. **Verify your setup**:
+3. **Verify your setup**:
    ```bash
    npm run build
    npm test
@@ -108,11 +108,10 @@ npm run format
    git commit -m "Brief description of your changes"
    ```
 
-   Pre-commit hooks will automatically:
+   Husky will automatically run lint-staged, which will:
    - Format your code with Prettier
-   - Remove trailing whitespace
-   - Fix line endings
-   - Check for merge conflicts
+   - Run ESLint with auto-fix
+   - Only process files you've staged for commit
 
 4. **Keep your branch updated**:
    ```bash
@@ -216,8 +215,8 @@ describe('YourComponent', () => {
 
 ## Why These Guidelines?
 
-- **Pre-commit hooks**: Catch issues early, before they reach CI
-- **Automated formatting**: Eliminates style debates, keeps diffs clean
+- **Git hooks (Husky)**: Catches issues locally before they reach CI
+- **Automated formatting (lint-staged)**: Only processes changed files for speed
 - **Testing requirements**: Ensures reliability and prevents regressions
 - **Code review**: Maintains quality and shares knowledge
 
