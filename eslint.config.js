@@ -3,14 +3,12 @@ import globals from 'globals';
 import json from '@eslint/json';
 import css from '@eslint/css';
 import markdown from '@eslint/markdown';
-import { defineConfig } from 'eslint/config';
 
-export default defineConfig([
+export default [
   // JavaScript files - recommended rules
   {
     files: ['**/*.{js,mjs,cjs}'],
     plugins: { js },
-    //extends: ['js/recommended'],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: 'module',
@@ -49,19 +47,32 @@ export default defineConfig([
     },
   },
 
-  { files: ['**/*.json'], plugins: { json }, language: 'json/json', extends: ['json/recommended'] },
+  {
+    files: ['**/*.json'],
+    plugins: { json },
+    language: 'json/json',
+    rules: { ...json.configs.recommended.rules },
+  },
+
   {
     files: ['**/*.jsonc'],
     plugins: { json },
     language: 'json/jsonc',
-    extends: ['json/recommended'],
+    rules: { ...json.configs.recommended.rules },
   },
-  { files: ['**/*.css'], plugins: { css }, language: 'css/css', extends: ['css/recommended'] },
+
+  {
+    files: ['**/*.css'],
+    plugins: { css },
+    language: 'css/css',
+    rules: { ...css.configs.recommended.rules },
+  },
+
   {
     files: ['**/*.md'],
     plugins: { markdown },
     language: 'markdown/gfm',
-    extends: ['markdown/recommended'],
+    rules: { ...markdown.configs.recommended.rules },
   },
 
   // Ignore patterns
@@ -75,4 +86,4 @@ export default defineConfig([
       '**/package-lock.json',
     ],
   },
-]);
+];
