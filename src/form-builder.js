@@ -1,10 +1,6 @@
 import { LitElement, html, css } from 'lit';
 import decode from 'jwt-decode';
 
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /**
  * Dynamic Form Builder Web Component
  * Fetches JSON schema and form data, then renders a dynamic form
@@ -264,6 +260,7 @@ class FormBuilder extends LitElement {
       } catch (err) {
         // Only need this to get the name, so warn
         console.warn('Security Token failed to decode -- setting user to unknown');
+        console.warn(err.message);
         this.decoded = { sub: 'unknown' };
       }
     } catch (err) {
@@ -433,7 +430,6 @@ class FormBuilder extends LitElement {
         timestamp: Date.now(),
         answers: this.formData,
       };
-      //await delay(300);
 
       const url = `${this.fbmsBaseUrl}/api/v1/submissions/${this.fbmsFormFname}`;
       const headers = {
