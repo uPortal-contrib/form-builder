@@ -27,8 +27,8 @@ This is a Lit-based web component project. We've recently migrated from React to
 1. **Fork and clone the repository**:
 
    ```bash
-   git clone https://github.com/yourusername/your-repo.git
-   cd your-repo
+   git clone https://github.com/yourusername/form-builder.git
+   cd form-builder
    ```
 
 2. **Install dependencies**:
