@@ -8,7 +8,8 @@
 
 ## About
 
-This is a lightweight web component built with [Lit](https://lit.dev/) that renders dynamic forms from JSON schemas. Originally built with React (~300KB bundle), it has been rewritten in Lit to achieve a **93% reduction in bundle size** (~20KB), while maintaining all functionality and improving performance.
+This is a lightweight web component built with [Lit](https://lit.dev/) that
+renders dynamic forms from JSON schemas.
 
 ## Installation
 
@@ -109,4 +110,5 @@ We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for gu
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Copyright 2025 The Apereo Foundation. Licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for details.
+Copyright 2025 The Apereo Foundation. Licensed under the Apache License, Version 2.0.
+See [LICENSE](./LICENSE) for details.
