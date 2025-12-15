@@ -22,7 +22,7 @@ jobs:
         run: npm ci
 
       - name: Run Prettier check
-        run: npm run link:check
+        run: npm run lint:check
 
       - name: Run ESLint
         run: npm run lint
@@ -42,7 +42,7 @@ jobs:
         run: npm ci
 
       - name: Run tests
-        run: npm test:ci
+        run: npm run test:ci
 
       - name: Upload coverage
         uses: codecov/codecov-action@v3
