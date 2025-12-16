@@ -71,6 +71,25 @@ class FormBuilder extends LitElement {
       gap: 8px;
     }
 
+    .nested-object {
+      margin-left: 20px;
+      padding-left: 20px;
+      border-left: 2px solid #e0e0e0;
+      margin-top: 10px;
+    }
+
+    .nested-object-title {
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 10px;
+    }
+
+    .nested-object-description {
+      font-size: 0.875rem;
+      color: #666;
+      margin-bottom: 15px;
+    }
+
     label {
       font-weight: 500;
       color: #333;
@@ -323,54 +342,104 @@ class FormBuilder extends LitElement {
     }
   }
 
-  handleInputChange(fieldName, event) {
-    const { type, value, checked } = event.target;
+  /**
+   * Get nested value from formData using dot notation path
+   * e.g., "contact_information.email" => formData.contact_information.email
+   */
+  getNestedValue(path) {
+    const parts = path.split('.');
+    let value = this.formData;
+    for (const part of parts) {
+      value = value?.[part];
+    }
+    return value;
+  }
 
-    this.formData = {
-      ...this.formData,
-      [fieldName]: type === 'checkbox' ? checked : value,
-    };
+  /**
+   * Set nested value in formData using dot notation path
+   */
+  setNestedValue(path, value) {
+    const parts = path.split('.');
+    const newData = { ...this.formData };
+    let current = newData;
+
+    for (let i = 0; i < parts.length - 1; i++) {
+      const part = parts[i];
+      if (!current[part] || typeof current[part] !== 'object') {
+        current[part] = {};
+      } else {
+        current[part] = { ...current[part] };
+      }
+      current = current[part];
+    }
+
+    current[parts[parts.length - 1]] = value;
+    this.formData = newData;
+  }
+
+  handleInputChange(fieldPath, event) {
+    const { type, value, checked } = event.target;
+    this.setNestedValue(fieldPath, type === 'checkbox' ? checked : value);
 
     // Clear field error on change
-    if (this.fieldErrors[fieldName]) {
+    if (this.fieldErrors[fieldPath]) {
       this.fieldErrors = { ...this.fieldErrors };
-      delete this.fieldErrors[fieldName];
+      delete this.fieldErrors[fieldPath];
     }
   }
 
-  handleArrayChange(fieldName, index, event) {
-    const currentArray = this.formData[fieldName] || [];
+  handleArrayChange(fieldPath, index, event) {
+    const currentArray = this.getNestedValue(fieldPath) || [];
     const newArray = [...currentArray];
     newArray[index] = event.target.value;
-
-    this.formData = {
-      ...this.formData,
-      [fieldName]: newArray,
-    };
+    this.setNestedValue(fieldPath, newArray);
   }
 
-  validateForm() {
+  /**
+   * Recursively validate form fields including nested objects
+   */
+  validateFormFields(properties, required = [], basePath = '') {
     const errors = {};
-    const { properties = {}, required = [] } = this.schema;
 
     // Check required fields
     required.forEach((fieldName) => {
-      const value = this.formData[fieldName];
+      const fieldPath = basePath ? `${basePath}.${fieldName}` : fieldName;
+      const value = this.getNestedValue(fieldPath);
       if (value === undefined || value === null || value === '') {
-        errors[fieldName] = 'This field is required';
+        errors[fieldPath] = 'This field is required';
       }
     });
 
     // Type validation
     Object.entries(properties).forEach(([fieldName, fieldSchema]) => {
-      const value = this.formData[fieldName];
+      const fieldPath = basePath ? `${basePath}.${fieldName}` : fieldName;
+      const value = this.getNestedValue(fieldPath);
+
+      // Handle nested objects recursively
+      if (fieldSchema.type === 'object' && fieldSchema.properties) {
+        const nestedErrors = this.validateFormFields(
+          fieldSchema.properties,
+          fieldSchema.required || [],
+          fieldPath
+        );
+        Object.assign(errors, nestedErrors);
+        return;
+      }
 
       if (value !== undefined && value !== null && value !== '') {
         // Email validation
         if (fieldSchema.format === 'email') {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
-            errors[fieldName] = 'Invalid email address';
+            errors[fieldPath] = 'Invalid email address';
+          }
+        }
+
+        // Pattern validation
+        if (fieldSchema.pattern) {
+          const regex = new RegExp(fieldSchema.pattern);
+          if (!regex.test(value)) {
+            errors[fieldPath] = fieldSchema.patternErrorMessage || 'Invalid format';
           }
         }
 
@@ -378,13 +447,13 @@ class FormBuilder extends LitElement {
         if (fieldSchema.type === 'number' || fieldSchema.type === 'integer') {
           const num = Number(value);
           if (isNaN(num)) {
-            errors[fieldName] = 'Must be a number';
+            errors[fieldPath] = 'Must be a number';
           } else {
             if (fieldSchema.minimum !== undefined && num < fieldSchema.minimum) {
-              errors[fieldName] = `Must be at least ${fieldSchema.minimum}`;
+              errors[fieldPath] = `Must be at least ${fieldSchema.minimum}`;
             }
             if (fieldSchema.maximum !== undefined && num > fieldSchema.maximum) {
-              errors[fieldName] = `Must be at most ${fieldSchema.maximum}`;
+              errors[fieldPath] = `Must be at most ${fieldSchema.maximum}`;
             }
           }
         }
@@ -392,17 +461,22 @@ class FormBuilder extends LitElement {
         // String length validation
         if (fieldSchema.type === 'string') {
           if (fieldSchema.minLength && value.length < fieldSchema.minLength) {
-            errors[fieldName] = `Must be at least ${fieldSchema.minLength} characters`;
+            errors[fieldPath] = `Must be at least ${fieldSchema.minLength} characters`;
           }
           if (fieldSchema.maxLength && value.length > fieldSchema.maxLength) {
-            errors[fieldName] = `Must be at most ${fieldSchema.maxLength} characters`;
+            errors[fieldPath] = `Must be at most ${fieldSchema.maxLength} characters`;
           }
         }
       }
     });
 
-    this.fieldErrors = errors;
-    return Object.keys(errors).length === 0;
+    return errors;
+  }
+
+  validateForm() {
+    const { properties = {}, required = [] } = this.schema;
+    this.fieldErrors = this.validateFormFields(properties, required);
+    return Object.keys(this.fieldErrors).length === 0;
   }
 
   async handleSubmit(event) {
@@ -481,38 +555,75 @@ class FormBuilder extends LitElement {
     this.requestUpdate();
   }
 
-  renderField(fieldName, fieldSchema) {
-    const value = this.formData[fieldName];
-    const error = this.fieldErrors[fieldName];
+  /**
+   * Render a field - can be a simple input or a nested object
+   */
+  renderField(fieldName, fieldSchema, basePath = '') {
+    const fieldPath = basePath ? `${basePath}.${fieldName}` : fieldName;
+
+    // Handle nested objects with properties
+    if (fieldSchema.type === 'object' && fieldSchema.properties) {
+      return this.renderNestedObject(fieldName, fieldSchema, basePath);
+    }
+
+    // Regular field
+    const value = this.getNestedValue(fieldPath);
+    const error = this.fieldErrors[fieldPath];
     const required = this.schema.required?.includes(fieldName);
-    const uiOptions = this.uiSchema?.[fieldName] || {};
+    const uiSchemaPath = fieldPath.split('.');
+    let uiOptions = this.uiSchema;
+    for (const part of uiSchemaPath) {
+      uiOptions = uiOptions?.[part];
+    }
+    uiOptions = uiOptions || {};
 
     return html`
       <div class="form-group">
-        <label class="${required ? 'required' : ''}" for="${fieldName}">
+        <label class="${required ? 'required' : ''}" for="${fieldPath}">
           ${fieldSchema.title || fieldName}
         </label>
 
         ${fieldSchema.description
           ? html` <span class="description">${fieldSchema.description}</span> `
           : ''}
-        ${this.renderInput(fieldName, fieldSchema, value, uiOptions)}
+        ${this.renderInput(fieldPath, fieldSchema, value, uiOptions)}
         ${error ? html` <span class="error-message">${error}</span> ` : ''}
       </div>
     `;
   }
 
-  renderInput(fieldName, fieldSchema, value, uiOptions) {
+  /**
+   * Render a nested object with its own properties
+   */
+  renderNestedObject(fieldName, fieldSchema, basePath = '') {
+    const fieldPath = basePath ? `${basePath}.${fieldName}` : fieldName;
+
+    return html`
+      <div class="nested-object">
+        ${fieldSchema.title
+          ? html`<div class="nested-object-title">${fieldSchema.title}</div>`
+          : ''}
+        ${fieldSchema.description
+          ? html`<div class="nested-object-description">${fieldSchema.description}</div>`
+          : ''}
+        ${Object.entries(fieldSchema.properties).map(([nestedFieldName, nestedFieldSchema]) =>
+          this.renderField(nestedFieldName, nestedFieldSchema, fieldPath)
+        )}
+      </div>
+    `;
+  }
+
+  renderInput(fieldPath, fieldSchema, value, uiOptions) {
     const { type, enum: enumValues, format } = fieldSchema;
 
     // Enum - render as select
     if (enumValues) {
       return html`
         <select
-          id="${fieldName}"
-          name="${fieldName}"
+          id="${fieldPath}"
+          name="${fieldPath}"
           .value="${value || ''}"
-          @change="${(e) => this.handleInputChange(fieldName, e)}"
+          @change="${(e) => this.handleInputChange(fieldPath, e)}"
         >
           <option value="">-- Select --</option>
           ${enumValues.map(
@@ -528,12 +639,12 @@ class FormBuilder extends LitElement {
         <div class="checkbox-item">
           <input
             type="checkbox"
-            id="${fieldName}"
-            name="${fieldName}"
+            id="${fieldPath}"
+            name="${fieldPath}"
             .checked="${!!value}"
-            @change="${(e) => this.handleInputChange(fieldName, e)}"
+            @change="${(e) => this.handleInputChange(fieldPath, e)}"
           />
-          <label for="${fieldName}">${fieldSchema.title || fieldName}</label>
+          <label for="${fieldPath}">${fieldSchema.title || fieldPath.split('.').pop()}</label>
         </div>
       `;
     }
@@ -544,10 +655,10 @@ class FormBuilder extends LitElement {
         return html`
           <input
             type="email"
-            id="${fieldName}"
-            name="${fieldName}"
+            id="${fieldPath}"
+            name="${fieldPath}"
             .value="${value || ''}"
-            @input="${(e) => this.handleInputChange(fieldName, e)}"
+            @input="${(e) => this.handleInputChange(fieldPath, e)}"
           />
         `;
       }
@@ -556,10 +667,10 @@ class FormBuilder extends LitElement {
         return html`
           <input
             type="date"
-            id="${fieldName}"
-            name="${fieldName}"
+            id="${fieldPath}"
+            name="${fieldPath}"
             .value="${value || ''}"
-            @input="${(e) => this.handleInputChange(fieldName, e)}"
+            @input="${(e) => this.handleInputChange(fieldPath, e)}"
           />
         `;
       }
@@ -567,10 +678,10 @@ class FormBuilder extends LitElement {
       if (uiOptions['ui:widget'] === 'textarea') {
         return html`
           <textarea
-            id="${fieldName}"
-            name="${fieldName}"
+            id="${fieldPath}"
+            name="${fieldPath}"
             .value="${value || ''}"
-            @input="${(e) => this.handleInputChange(fieldName, e)}"
+            @input="${(e) => this.handleInputChange(fieldPath, e)}"
           ></textarea>
         `;
       }
@@ -579,10 +690,10 @@ class FormBuilder extends LitElement {
       return html`
         <input
           type="text"
-          id="${fieldName}"
-          name="${fieldName}"
+          id="${fieldPath}"
+          name="${fieldPath}"
           .value="${value || ''}"
-          @input="${(e) => this.handleInputChange(fieldName, e)}"
+          @input="${(e) => this.handleInputChange(fieldPath, e)}"
         />
       `;
     }
@@ -592,11 +703,11 @@ class FormBuilder extends LitElement {
       return html`
         <input
           type="number"
-          id="${fieldName}"
-          name="${fieldName}"
+          id="${fieldPath}"
+          name="${fieldPath}"
           .value="${value || ''}"
           step="${type === 'integer' ? '1' : 'any'}"
-          @input="${(e) => this.handleInputChange(fieldName, e)}"
+          @input="${(e) => this.handleInputChange(fieldPath, e)}"
         />
       `;
     }
@@ -605,10 +716,10 @@ class FormBuilder extends LitElement {
     return html`
       <input
         type="text"
-        id="${fieldName}"
-        name="${fieldName}"
+        id="${fieldPath}"
+        name="${fieldPath}"
         .value="${value || ''}"
-        @input="${(e) => this.handleInputChange(fieldName, e)}"
+        @input="${(e) => this.handleInputChange(fieldPath, e)}"
       />
     `;
   }

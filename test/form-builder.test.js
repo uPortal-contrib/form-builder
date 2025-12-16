@@ -588,3 +588,404 @@ describe('FormBuilder', () => {
     });
   });
 });
+
+describe('FormBuilder - Nested Objects', () => {
+  let element;
+  let fetchStub;
+
+  // Mock schema with nested objects (like communication-preferences)
+  const mockNestedSchema = {
+    title: 'Communication Preferences',
+    description: 'Please review your contact information',
+    type: 'object',
+    properties: {
+      contact_information: {
+        description: 'Your contact details',
+        type: 'object',
+        properties: {
+          primary_cell_number: {
+            title: 'Primary Cell Number',
+            type: 'string',
+            pattern: '^\\d{3}-\\d{3}-\\d{4}$',
+          },
+          email_address: {
+            title: 'Email Address',
+            type: 'string',
+            format: 'email',
+          },
+        },
+      },
+      channels: {
+        description: 'Notification channels',
+        type: 'object',
+        properties: {
+          taco_truck: {
+            title: 'Taco Truck',
+            type: 'object',
+            properties: {
+              receive: {
+                type: 'string',
+                enum: ['Yes', 'No'],
+              },
+            },
+          },
+        },
+      },
+      preserve_selections: {
+        description: 'Preserve your selections',
+        type: 'boolean',
+      },
+    },
+  };
+
+  const mockNestedFormData = {
+    contact_information: {
+      primary_cell_number: '555-123-4567',
+      email_address: 'test@example.com',
+    },
+    channels: {
+      taco_truck: {
+        receive: 'Yes',
+      },
+    },
+    preserve_selections: true,
+  };
+
+  const mockSchemaResp = {
+    fname: 'communication-preferences',
+    version: 1,
+    schema: mockNestedSchema,
+    metadata: {},
+  };
+
+  beforeEach(() => {
+    fetchStub = stub(window, 'fetch');
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  describe('Nested Object Rendering', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: mockNestedFormData }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should render nested object containers', () => {
+      const nestedContainers = element.shadowRoot.querySelectorAll('.nested-object');
+      expect(nestedContainers.length).to.be.greaterThan(0);
+    });
+
+    it('should render nested object titles and descriptions', () => {
+      const descriptions = element.shadowRoot.querySelectorAll('.nested-object-description');
+      expect(descriptions.length).to.be.greaterThan(0);
+    });
+
+    it('should render fields within nested objects', () => {
+      // Check for nested field inputs
+      const cellInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.primary_cell_number"]'
+      );
+      const emailInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.email_address"]'
+      );
+
+      expect(cellInput).to.exist;
+      expect(emailInput).to.exist;
+    });
+
+    it('should load nested form data correctly', () => {
+      const cellInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.primary_cell_number"]'
+      );
+      const emailInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.email_address"]'
+      );
+
+      expect(cellInput.value).to.equal('555-123-4567');
+      expect(emailInput.value).to.equal('test@example.com');
+    });
+
+    it('should render deeply nested objects (3 levels)', () => {
+      const tacoReceiveSelect = element.shadowRoot.querySelector(
+        'select[name="channels.taco_truck.receive"]'
+      );
+
+      expect(tacoReceiveSelect).to.exist;
+      expect(tacoReceiveSelect.value).to.equal('Yes');
+    });
+
+    it('should render non-nested fields alongside nested ones', () => {
+      const preserveCheckbox = element.shadowRoot.querySelector(
+        'input[name="preserve_selections"]'
+      );
+
+      expect(preserveCheckbox).to.exist;
+      expect(preserveCheckbox.type).to.equal('checkbox');
+      expect(preserveCheckbox.checked).to.be.true;
+    });
+  });
+
+  describe('Nested Object Input Handling', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should update nested formData on input change', async () => {
+      const cellInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.primary_cell_number"]'
+      );
+
+      cellInput.value = '555-999-8888';
+      cellInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await element.updateComplete;
+
+      expect(element.formData.contact_information.primary_cell_number).to.equal('555-999-8888');
+    });
+
+    it('should handle multiple nested levels correctly', async () => {
+      const tacoSelect = element.shadowRoot.querySelector(
+        'select[name="channels.taco_truck.receive"]'
+      );
+
+      tacoSelect.value = 'No';
+      tacoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      await element.updateComplete;
+
+      expect(element.formData.channels.taco_truck.receive).to.equal('No');
+    });
+
+    it('should not affect sibling nested objects when updating', async () => {
+      const cellInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.primary_cell_number"]'
+      );
+      const tacoSelect = element.shadowRoot.querySelector(
+        'select[name="channels.taco_truck.receive"]'
+      );
+
+      cellInput.value = '555-111-2222';
+      cellInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      tacoSelect.value = 'Yes';
+      tacoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      await element.updateComplete;
+
+      expect(element.formData.contact_information.primary_cell_number).to.equal('555-111-2222');
+      expect(element.formData.channels.taco_truck.receive).to.equal('Yes');
+    });
+  });
+
+  describe('Nested Object Validation', () => {
+    beforeEach(async () => {
+      // Schema with required nested fields
+      const schemaWithRequired = {
+        ...mockNestedSchema,
+        properties: {
+          ...mockNestedSchema.properties,
+          contact_information: {
+            ...mockNestedSchema.properties.contact_information,
+            required: ['email_address'],
+          },
+        },
+      };
+
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => ({ ...mockSchemaResp, schema: schemaWithRequired }),
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should validate required nested fields', async () => {
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      expect(element.fieldErrors['contact_information.email_address']).to.equal(
+        'This field is required'
+      );
+    });
+
+    it('should validate pattern in nested fields', async () => {
+      element.formData = {
+        contact_information: {
+          primary_cell_number: 'invalid-format',
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.false;
+      expect(element.fieldErrors['contact_information.primary_cell_number']).to.exist;
+    });
+
+    it('should validate email format in nested fields', async () => {
+      element.formData = {
+        contact_information: {
+          email_address: 'not-an-email',
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.false;
+      expect(element.fieldErrors['contact_information.email_address']).to.equal(
+        'Invalid email address'
+      );
+    });
+
+    it('should pass validation with valid nested data', () => {
+      element.formData = {
+        contact_information: {
+          primary_cell_number: '555-123-4567',
+          email_address: 'valid@example.com',
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.true;
+      expect(Object.keys(element.fieldErrors)).to.have.lengthOf(0);
+    });
+  });
+
+  describe('Nested Object Form Submission', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+      fetchStub.reset();
+    });
+
+    it('should submit nested form data structure', async () => {
+      element.formData = mockNestedFormData;
+
+      fetchStub.resolves({
+        ok: true,
+        json: async () => ({}),
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await waitUntil(() => fetchStub.called);
+
+      const [, options] = fetchStub.firstCall.args;
+      const body = JSON.parse(options.body);
+
+      expect(body.answers).to.deep.equal(mockNestedFormData);
+      expect(body.answers.contact_information.email_address).to.equal('test@example.com');
+      expect(body.answers.channels.taco_truck.receive).to.equal('Yes');
+    });
+  });
+
+  describe('Helper Methods', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: mockNestedFormData }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should get nested value using dot notation', () => {
+      const value = element.getNestedValue('contact_information.email_address');
+      expect(value).to.equal('test@example.com');
+    });
+
+    it('should get deeply nested value', () => {
+      const value = element.getNestedValue('channels.taco_truck.receive');
+      expect(value).to.equal('Yes');
+    });
+
+    it('should return undefined for non-existent path', () => {
+      const value = element.getNestedValue('does.not.exist');
+      expect(value).to.be.undefined;
+    });
+
+    it('should set nested value using dot notation', () => {
+      element.setNestedValue('contact_information.email_address', 'new@example.com');
+      expect(element.formData.contact_information.email_address).to.equal('new@example.com');
+    });
+
+    it('should create nested structure if it does not exist', () => {
+      element.formData = {};
+      element.setNestedValue('new.nested.value', 'test');
+      expect(element.formData.new.nested.value).to.equal('test');
+    });
+  });
+});
