@@ -7,7 +7,7 @@ on:
     branches: [ main, master ]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   lint-and-format:
