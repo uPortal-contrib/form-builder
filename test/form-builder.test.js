@@ -988,4 +988,122 @@ describe('FormBuilder - Nested Objects', () => {
       expect(element.formData.new.nested.value).to.equal('test');
     });
   });
+
+  describe('Nested Required Fields', () => {
+    beforeEach(async () => {
+      // Schema with required fields at different nesting levels
+      const schemaWithNestedRequired = {
+        title: 'Test Form',
+        type: 'object',
+        required: ['top_level_field'], // Top-level required
+        properties: {
+          top_level_field: {
+            type: 'string',
+            title: 'Top Level Field',
+          },
+          contact_info: {
+            type: 'object',
+            title: 'Contact Information',
+            required: ['email', 'phone'], // Nested required fields
+            properties: {
+              email: {
+                type: 'string',
+                title: 'Email',
+                format: 'email',
+              },
+              phone: {
+                type: 'string',
+                title: 'Phone',
+              },
+              optional_field: {
+                type: 'string',
+                title: 'Optional',
+              },
+            },
+          },
+          not_required: {
+            type: 'string',
+            title: 'Not Required',
+          },
+        },
+      };
+
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => ({
+          fname: 'test-form',
+          version: 1,
+          schema: schemaWithNestedRequired,
+          metadata: {},
+        }),
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should mark top-level required fields with asterisk', () => {
+      const topLevelLabel = element.shadowRoot.querySelector('label[for="top_level_field"]');
+      expect(topLevelLabel.classList.contains('required')).to.be.true;
+    });
+
+    it('should mark nested required fields with asterisk', () => {
+      const emailLabel = element.shadowRoot.querySelector('label[for="contact_info.email"]');
+      const phoneLabel = element.shadowRoot.querySelector('label[for="contact_info.phone"]');
+
+      expect(emailLabel.classList.contains('required')).to.be.true;
+      expect(phoneLabel.classList.contains('required')).to.be.true;
+    });
+
+    it('should NOT mark nested optional fields with asterisk', () => {
+      const optionalLabel = element.shadowRoot.querySelector(
+        'label[for="contact_info.optional_field"]'
+      );
+      expect(optionalLabel.classList.contains('required')).to.be.false;
+    });
+
+    it('should NOT mark top-level optional fields with asterisk', () => {
+      const notRequiredLabel = element.shadowRoot.querySelector('label[for="not_required"]');
+      expect(notRequiredLabel.classList.contains('required')).to.be.false;
+    });
+
+    it('should validate nested required fields correctly', () => {
+      element.formData = {
+        top_level_field: 'filled',
+        contact_info: {
+          optional_field: 'filled',
+          // email and phone missing
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.false;
+      expect(element.fieldErrors['contact_info.email']).to.equal('This field is required');
+      expect(element.fieldErrors['contact_info.phone']).to.equal('This field is required');
+      expect(element.fieldErrors['contact_info.optional_field']).to.be.undefined;
+    });
+
+    it('should pass validation when nested required fields are filled', () => {
+      element.formData = {
+        top_level_field: 'filled',
+        contact_info: {
+          email: 'test@example.com',
+          phone: '555-1234',
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.true;
+      expect(Object.keys(element.fieldErrors)).to.have.lengthOf(0);
+    });
+  });
 });

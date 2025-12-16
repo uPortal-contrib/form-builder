@@ -377,6 +377,22 @@ class FormBuilder extends LitElement {
     this.formData = newData;
   }
 
+  /**
+   * Get the schema object at a given path
+   * e.g., "contact_information" => schema.properties.contact_information
+   */
+  getSchemaAtPath(path) {
+    const parts = path.split('.');
+    let schema = this.schema;
+
+    for (const part of parts) {
+      schema = schema.properties?.[part];
+      if (!schema) return null;
+    }
+
+    return schema;
+  }
+
   handleInputChange(fieldPath, event) {
     const { type, value, checked } = event.target;
     this.setNestedValue(fieldPath, type === 'checkbox' ? checked : value);
@@ -569,7 +585,9 @@ class FormBuilder extends LitElement {
     // Regular field
     const value = this.getNestedValue(fieldPath);
     const error = this.fieldErrors[fieldPath];
-    const required = this.schema.required?.includes(fieldName);
+    // For nested fields, check the parent schema's required array
+    const parentSchema = basePath ? this.getSchemaAtPath(basePath) : this.schema;
+    const required = parentSchema.required?.includes(fieldName);
     const uiSchemaPath = fieldPath.split('.');
     let uiOptions = this.uiSchema;
     for (const part of uiSchemaPath) {
