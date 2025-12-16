@@ -63,7 +63,7 @@
     "lint-staged": "^16.2.7",
     "prettier": "^3.2.4",
     "rollup": "^4.9.5",
-    "rollup-plugin-summary": "^2.0.0",
+    "rollup-plugin-summary": "^3.0.1",
     "rollup-plugin-visualizer": "^6.0.5",
     "sinon": "^17.0.1"
   },
