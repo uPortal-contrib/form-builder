@@ -922,6 +922,43 @@ describe('FormBuilder - Nested Objects', () => {
       expect(isValid).to.be.true;
       expect(Object.keys(element.fieldErrors)).to.have.lengthOf(0);
     });
+
+    it('should display error messages in UI for nested fields', async () => {
+      // Submit form with invalid nested data
+      element.formData = {
+        contact_information: {
+          email_address: 'invalid-email',
+          primary_cell_number: 'wrong-format',
+        },
+      };
+
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      // Check that error messages are rendered in the DOM
+      const emailErrorMsg = Array.from(element.shadowRoot.querySelectorAll('.error-message')).find(
+        (el) => el.textContent.includes('Invalid email address')
+      );
+
+      const phoneErrorMsg = Array.from(element.shadowRoot.querySelectorAll('.error-message')).find(
+        (el) => el.textContent.includes('Invalid format')
+      );
+
+      expect(emailErrorMsg).to.exist;
+      expect(phoneErrorMsg).to.exist;
+
+      // Verify errors are displayed next to the correct fields
+      const emailInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.email_address"]'
+      );
+      const emailFormGroup = emailInput.closest('.form-group');
+      const emailError = emailFormGroup.querySelector('.error-message');
+
+      expect(emailError).to.exist;
+      expect(emailError.textContent).to.include('Invalid email address');
+    });
   });
 
   describe('Nested Object Form Submission', () => {
