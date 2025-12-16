@@ -1,9 +1,5 @@
-import { LitElement, html, css } from "lit";
-import decode from "jwt-decode";
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
+import { LitElement, html, css } from 'lit';
+import decode from 'jwt-decode';
 
 /**
  * Dynamic Form Builder Web Component
@@ -18,10 +14,10 @@ function delay(ms) {
  */
 class FormBuilder extends LitElement {
   static properties = {
-    fbmsBaseUrl: { type: String, attribute: "fbms-base-url" },
-    fbmsFormFname: { type: String, attribute: "fbms-form-fname" },
-    oidcUrl: { type: String, attribute: "oidc-url" },
-    customStyles: { type: String, attribute: "styles" },
+    fbmsBaseUrl: { type: String, attribute: 'fbms-base-url' },
+    fbmsFormFname: { type: String, attribute: 'fbms-form-fname' },
+    oidcUrl: { type: String, attribute: 'oidc-url' },
+    customStyles: { type: String, attribute: 'styles' },
 
     // Internal state
     schema: { type: Object, state: true },
@@ -39,8 +35,7 @@ class FormBuilder extends LitElement {
     :host {
       display: block;
       font-family:
-        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
-        Cantarell, sans-serif;
+        -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
     }
 
     .container {
@@ -82,7 +77,7 @@ class FormBuilder extends LitElement {
     }
 
     .required::after {
-      content: " *";
+      content: ' *';
       color: #c00;
     }
 
@@ -92,11 +87,11 @@ class FormBuilder extends LitElement {
       margin-top: 4px;
     }
 
-    input[type="text"],
-    input[type="email"],
-    input[type="number"],
-    input[type="date"],
-    input[type="tel"],
+    input[type='text'],
+    input[type='email'],
+    input[type='number'],
+    input[type='date'],
+    input[type='tel'],
     textarea,
     select {
       padding: 8px 12px;
@@ -121,8 +116,8 @@ class FormBuilder extends LitElement {
       resize: vertical;
     }
 
-    input[type="checkbox"],
-    input[type="radio"] {
+    input[type='checkbox'],
+    input[type='radio'] {
       margin-right: 8px;
     }
 
@@ -161,21 +156,21 @@ class FormBuilder extends LitElement {
       transition: background-color 0.2s;
     }
 
-    button[type="submit"] {
+    button[type='submit'] {
       background-color: #0066cc;
       color: white;
     }
 
-    button[type="submit"]:hover {
+    button[type='submit']:hover {
       background-color: #0052a3;
     }
 
-    button[type="button"] {
+    button[type='button'] {
       background-color: #c0c0c0;
       color: #333;
     }
 
-    button[type="button"]:hover {
+    button[type='button']:hover {
       background-color: #e0e0e0;
     }
 
@@ -219,7 +214,7 @@ class FormBuilder extends LitElement {
     this.uiSchema = null;
     this.fbmsFormVersion = null;
     this.token = null;
-    this.decoded = { sub: "unknown" };
+    this.decoded = { sub: 'unknown' };
     this.fieldErrors = {};
   }
 
@@ -243,7 +238,7 @@ class FormBuilder extends LitElement {
 
       this.loading = false;
     } catch (err) {
-      this.error = err.message || "Failed to initialize form";
+      this.error = err.message || 'Failed to initialize form';
       this.loading = false;
     }
   }
@@ -251,42 +246,40 @@ class FormBuilder extends LitElement {
   async fetchToken() {
     try {
       const response = await fetch(this.oidcUrl, {
-        credentials: "include",
+        credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error("Failed to authenticate");
+        throw new Error('Failed to authenticate');
       }
 
       const data = await response.text();
       this.token = data;
       try {
         this.decoded = decode(this.token);
-      } catch (err) {
+      } catch (_err) {
         // Only need this to get the name, so warn
-        console.warn(
-          "Security Token failed to decode -- setting user to unknown",
-        );
-        this.decoded = { sub: "unknown" };
+        console.warn('Security Token failed to decode -- setting user to unknown');
+        this.decoded = { sub: 'unknown' };
       }
     } catch (err) {
-      console.error("Token fetch error:", err);
-      throw new Error("Authentication failed");
+      console.error('Token fetch error:', err);
+      throw new Error('Authentication failed');
     }
   }
 
   async fetchSchema() {
     const url = `${this.fbmsBaseUrl}/api/v1/forms/${this.fbmsFormFname}`;
     const headers = {
-      "content-type": "application/jwt",
+      'content-type': 'application/jwt',
     };
 
     if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
+      headers['Authorization'] = `Bearer ${this.token}`;
     }
 
     const response = await fetch(url, {
-      credentials: "same-origin",
+      credentials: 'same-origin',
       headers,
     });
 
@@ -298,22 +291,21 @@ class FormBuilder extends LitElement {
     this.fbmsFormVersion = data.version;
     this.schema = data.schema || data;
     this.uiSchema = data.metadata;
-    //console.log(data);
   }
 
   async fetchFormData() {
     const url = `${this.fbmsBaseUrl}/api/v1/submissions/${this.fbmsFormFname}?safarifix=${Math.random()}`;
     const headers = {
-      "content-type": "application/jwt",
+      'content-type': 'application/jwt',
     };
 
     if (this.token) {
-      headers["Authorization"] = `Bearer ${this.token}`;
+      headers['Authorization'] = `Bearer ${this.token}`;
     }
 
     try {
       const response = await fetch(url, {
-        credentials: "same-origin",
+        credentials: 'same-origin',
         headers,
       });
 
@@ -326,7 +318,7 @@ class FormBuilder extends LitElement {
       }
     } catch (err) {
       // Non-critical error
-      console.warn("Could not fetch form data:", err);
+      console.warn('Could not fetch form data:', err);
       this.formData = {};
     }
   }
@@ -336,7 +328,7 @@ class FormBuilder extends LitElement {
 
     this.formData = {
       ...this.formData,
-      [fieldName]: type === "checkbox" ? checked : value,
+      [fieldName]: type === 'checkbox' ? checked : value,
     };
 
     // Clear field error on change
@@ -364,8 +356,8 @@ class FormBuilder extends LitElement {
     // Check required fields
     required.forEach((fieldName) => {
       const value = this.formData[fieldName];
-      if (value === undefined || value === null || value === "") {
-        errors[fieldName] = "This field is required";
+      if (value === undefined || value === null || value === '') {
+        errors[fieldName] = 'This field is required';
       }
     });
 
@@ -373,45 +365,37 @@ class FormBuilder extends LitElement {
     Object.entries(properties).forEach(([fieldName, fieldSchema]) => {
       const value = this.formData[fieldName];
 
-      if (value !== undefined && value !== null && value !== "") {
+      if (value !== undefined && value !== null && value !== '') {
         // Email validation
-        if (fieldSchema.format === "email") {
+        if (fieldSchema.format === 'email') {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
-            errors[fieldName] = "Invalid email address";
+            errors[fieldName] = 'Invalid email address';
           }
         }
 
         // Number validation
-        if (fieldSchema.type === "number" || fieldSchema.type === "integer") {
+        if (fieldSchema.type === 'number' || fieldSchema.type === 'integer') {
           const num = Number(value);
           if (isNaN(num)) {
-            errors[fieldName] = "Must be a number";
+            errors[fieldName] = 'Must be a number';
           } else {
-            if (
-              fieldSchema.minimum !== undefined &&
-              num < fieldSchema.minimum
-            ) {
+            if (fieldSchema.minimum !== undefined && num < fieldSchema.minimum) {
               errors[fieldName] = `Must be at least ${fieldSchema.minimum}`;
             }
-            if (
-              fieldSchema.maximum !== undefined &&
-              num > fieldSchema.maximum
-            ) {
+            if (fieldSchema.maximum !== undefined && num > fieldSchema.maximum) {
               errors[fieldName] = `Must be at most ${fieldSchema.maximum}`;
             }
           }
         }
 
         // String length validation
-        if (fieldSchema.type === "string") {
+        if (fieldSchema.type === 'string') {
           if (fieldSchema.minLength && value.length < fieldSchema.minLength) {
-            errors[fieldName] =
-              `Must be at least ${fieldSchema.minLength} characters`;
+            errors[fieldName] = `Must be at least ${fieldSchema.minLength} characters`;
           }
           if (fieldSchema.maxLength && value.length > fieldSchema.maxLength) {
-            errors[fieldName] =
-              `Must be at most ${fieldSchema.maxLength} characters`;
+            errors[fieldName] = `Must be at most ${fieldSchema.maxLength} characters`;
           }
         }
       }
@@ -444,20 +428,19 @@ class FormBuilder extends LitElement {
         timestamp: Date.now(),
         answers: this.formData,
       };
-      //await delay(300);
 
       const url = `${this.fbmsBaseUrl}/api/v1/submissions/${this.fbmsFormFname}`;
       const headers = {
-        "content-type": "application/json",
+        'content-type': 'application/json',
       };
 
       if (this.token) {
-        headers["Authorization"] = `Bearer ${this.token}`;
+        headers['Authorization'] = `Bearer ${this.token}`;
       }
 
       const response = await fetch(url, {
-        method: "POST",
-        credentials: "same-origin",
+        method: 'POST',
+        credentials: 'same-origin',
         headers,
         body: JSON.stringify(body),
       });
@@ -468,24 +451,24 @@ class FormBuilder extends LitElement {
 
       // Dispatch success event
       this.dispatchEvent(
-        new CustomEvent("form-submit-success", {
+        new CustomEvent('form-submit-success', {
           detail: { data: body },
           bubbles: true,
           composed: true,
-        }),
+        })
       );
 
       // Optional: Reset or show success message
       this.error = null;
     } catch (err) {
-      this.error = err.message || "Failed to submit form";
+      this.error = err.message || 'Failed to submit form';
 
       this.dispatchEvent(
-        new CustomEvent("form-submit-error", {
+        new CustomEvent('form-submit-error', {
           detail: { error: err.message },
           bubbles: true,
           composed: true,
-        }),
+        })
       );
     } finally {
       this.submitting = false;
@@ -506,15 +489,15 @@ class FormBuilder extends LitElement {
 
     return html`
       <div class="form-group">
-        <label class="${required ? "required" : ""}" for="${fieldName}">
+        <label class="${required ? 'required' : ''}" for="${fieldName}">
           ${fieldSchema.title || fieldName}
         </label>
 
         ${fieldSchema.description
           ? html` <span class="description">${fieldSchema.description}</span> `
-          : ""}
+          : ''}
         ${this.renderInput(fieldName, fieldSchema, value, uiOptions)}
-        ${error ? html` <span class="error-message">${error}</span> ` : ""}
+        ${error ? html` <span class="error-message">${error}</span> ` : ''}
       </div>
     `;
   }
@@ -528,23 +511,19 @@ class FormBuilder extends LitElement {
         <select
           id="${fieldName}"
           name="${fieldName}"
-          .value="${value || ""}"
+          .value="${value || ''}"
           @change="${(e) => this.handleInputChange(fieldName, e)}"
         >
           <option value="">-- Select --</option>
           ${enumValues.map(
-            (opt) => html`
-              <option value="${opt}" ?selected="${value === opt}">
-                ${opt}
-              </option>
-            `,
+            (opt) => html` <option value="${opt}" ?selected="${value === opt}">${opt}</option> `
           )}
         </select>
       `;
     }
 
     // Boolean - render as checkbox
-    if (type === "boolean") {
+    if (type === 'boolean') {
       return html`
         <div class="checkbox-item">
           <input
@@ -560,37 +539,37 @@ class FormBuilder extends LitElement {
     }
 
     // String with format
-    if (type === "string") {
-      if (format === "email") {
+    if (type === 'string') {
+      if (format === 'email') {
         return html`
           <input
             type="email"
             id="${fieldName}"
             name="${fieldName}"
-            .value="${value || ""}"
+            .value="${value || ''}"
             @input="${(e) => this.handleInputChange(fieldName, e)}"
           />
         `;
       }
 
-      if (format === "date") {
+      if (format === 'date') {
         return html`
           <input
             type="date"
             id="${fieldName}"
             name="${fieldName}"
-            .value="${value || ""}"
+            .value="${value || ''}"
             @input="${(e) => this.handleInputChange(fieldName, e)}"
           />
         `;
       }
 
-      if (uiOptions["ui:widget"] === "textarea") {
+      if (uiOptions['ui:widget'] === 'textarea') {
         return html`
           <textarea
             id="${fieldName}"
             name="${fieldName}"
-            .value="${value || ""}"
+            .value="${value || ''}"
             @input="${(e) => this.handleInputChange(fieldName, e)}"
           ></textarea>
         `;
@@ -602,21 +581,21 @@ class FormBuilder extends LitElement {
           type="text"
           id="${fieldName}"
           name="${fieldName}"
-          .value="${value || ""}"
+          .value="${value || ''}"
           @input="${(e) => this.handleInputChange(fieldName, e)}"
         />
       `;
     }
 
     // Number
-    if (type === "number" || type === "integer") {
+    if (type === 'number' || type === 'integer') {
       return html`
         <input
           type="number"
           id="${fieldName}"
           name="${fieldName}"
-          .value="${value || ""}"
-          step="${type === "integer" ? "1" : "any"}"
+          .value="${value || ''}"
+          step="${type === 'integer' ? '1' : 'any'}"
           @input="${(e) => this.handleInputChange(fieldName, e)}"
         />
       `;
@@ -628,7 +607,7 @@ class FormBuilder extends LitElement {
         type="text"
         id="${fieldName}"
         name="${fieldName}"
-        .value="${value || ""}"
+        .value="${value || ''}"
         @input="${(e) => this.handleInputChange(fieldName, e)}"
       />
     `;
@@ -664,31 +643,24 @@ class FormBuilder extends LitElement {
         ? html`<style>
             ${this.customStyles}
           </style>`
-        : ""}
+        : ''}
 
       <div class="container">
         <form @submit="${this.handleSubmit}">
-          ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ""}
-          ${this.schema.description
-            ? html`<p>${this.schema.description}</p>`
-            : ""}
-          ${Object.entries(this.schema.properties).map(
-            ([fieldName, fieldSchema]) =>
-              this.renderField(fieldName, fieldSchema),
+          ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
+          ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
+          ${Object.entries(this.schema.properties).map(([fieldName, fieldSchema]) =>
+            this.renderField(fieldName, fieldSchema)
           )}
 
           <div class="buttons">
             <button type="submit" ?disabled="${this.submitting}">
               <span class="button-content">
-                ${this.submitting ? html`<span class="spinner"></span>` : ""}
-                ${this.submitting ? "Submitting..." : "Submit"}
+                ${this.submitting ? html`<span class="spinner"></span>` : ''}
+                ${this.submitting ? 'Submitting...' : 'Submit'}
               </span>
             </button>
-            <button
-              type="button"
-              @click="${this.handleReset}"
-              ?disabled="${this.submitting}"
-            >
+            <button type="button" @click="${this.handleReset}" ?disabled="${this.submitting}">
               Reset
             </button>
           </div>
@@ -698,4 +670,4 @@ class FormBuilder extends LitElement {
   }
 }
 
-customElements.define("form-builder", FormBuilder);
+customElements.define('form-builder', FormBuilder);
