@@ -18,7 +18,7 @@ This is a Lit-based web component project. We've recently migrated from React to
 
 ### Prerequisites
 
-- Node.js 18 or higher
+- Node.js 20 or higher
 - npm 9 or higher
 - Git
 

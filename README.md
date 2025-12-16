@@ -110,5 +110,5 @@ We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for gu
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
-Copyright 2025 The Apereo Foundation. Licensed under the Apache License, Version 2.0.
+Copyright 2018-2025 The Apereo Foundation. Licensed under the Apache License, Version 2.0.
 See [LICENSE](./LICENSE) for details.
