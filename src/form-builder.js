@@ -1,5 +1,5 @@
 import { LitElement, html, css } from 'lit';
-import decode from 'jwt-decode';
+import { jwtDecode } from 'jwt-decode';
 
 /**
  * Dynamic Form Builder Web Component
@@ -256,7 +256,7 @@ class FormBuilder extends LitElement {
       const data = await response.text();
       this.token = data;
       try {
-        this.decoded = decode(this.token);
+        this.decoded = jwtDecode(this.token);
       } catch (_err) {
         // Only need this to get the name, so warn
         console.warn('Security Token failed to decode -- setting user to unknown');

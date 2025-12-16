@@ -43,7 +43,7 @@
   "author": "",
   "license": "Apache-2.0",
   "dependencies": {
-    "jwt-decode": "^3.0.0",
+    "jwt-decode": "^4.0.0",
     "lit": "^3.0.0"
   },
   "devDependencies": {
