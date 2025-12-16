@@ -602,6 +602,7 @@ describe('FormBuilder - Nested Objects', () => {
       contact_information: {
         description: 'Your contact details',
         type: 'object',
+        required: ['email_address'],
         properties: {
           primary_cell_number: {
             title: 'Primary Cell Number',
@@ -807,6 +808,32 @@ describe('FormBuilder - Nested Objects', () => {
 
       expect(element.formData.contact_information.primary_cell_number).to.equal('555-111-2222');
       expect(element.formData.channels.taco_truck.receive).to.equal('Yes');
+    });
+
+    it('should clear nested field error on input change', async () => {
+      // Trigger validation to create a real error
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      // Verify error exists for empty nested field
+      expect(element.fieldErrors['contact_information.email_address']).to.exist;
+
+      const errorMessages = element.shadowRoot.querySelectorAll('.error-message');
+      expect(errorMessages.length).to.be.greaterThan(0);
+
+      // Type into the nested field
+      const emailInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.email_address"]'
+      );
+      emailInput.value = 'valid@example.com';
+      emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await element.updateComplete;
+
+      // Error should be cleared
+      expect(element.fieldErrors['contact_information.email_address']).to.be.undefined;
     });
   });
 
