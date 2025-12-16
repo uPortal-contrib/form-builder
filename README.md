@@ -2,7 +2,7 @@
 
 [![NPM Version](https://img.shields.io/npm/v/@uportal/form-builder.svg)](https://www.npmjs.com/package/@uportal/form-builder)
 [![Maven Central](https://maven-badges.herokuapp.com/maven-central/org.webjars.npm/uportal__form-builder/badge.svg)](https://maven-badges.herokuapp.com/maven-central/org.webjars.npm/uportal__form-builder)
-[![Build Status](https://github.com/uPortal-contrib/form-builder/workflows/CI/badge.svg)](https://github.com/uPortal-contrib/form-builder/actions)
+[![Build Status](https://github.com/uPortal-contrib/form-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/uPortal-contrib/form-builder/actions/workflows/ci.yml)
 
 > Create HTML input forms dynamically using Lit web components
 
