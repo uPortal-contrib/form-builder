@@ -381,6 +381,14 @@ class FormBuilder extends LitElement {
   }
 
   /**
+   * Sanitize a string for use as an HTML ID
+   * Replaces spaces and special characters with hyphens
+   */
+  sanitizeId(str) {
+    return str.replace(/[^a-zA-Z0-9-_.]/g, '-').replace(/-+/g, '-');
+  }
+
+  /**
    * Set nested value in formData using dot notation path
    */
   setNestedValue(path, value) {
@@ -728,21 +736,22 @@ class FormBuilder extends LitElement {
 
       return html`
         <div class="${containerClass}">
-          ${items.enum.map(
-            (opt) => html`
+          ${items.enum.map((opt) => {
+            const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
+            return html`
               <div class="checkbox-item">
                 <input
                   type="checkbox"
-                  id="${fieldPath}-${opt}"
+                  id="${sanitizedId}"
                   name="${fieldPath}"
                   value="${opt}"
                   .checked="${selectedValues.includes(opt)}"
                   @change="${(e) => this.handleCheckboxArrayChange(fieldPath, opt, e)}"
                 />
-                <label for="${fieldPath}-${opt}">${opt}</label>
+                <label for="${sanitizedId}">${opt}</label>
               </div>
-            `
-          )}
+            `;
+          })}
         </div>
       `;
     }
@@ -774,21 +783,22 @@ class FormBuilder extends LitElement {
 
       return html`
         <div class="${containerClass}">
-          ${enumValues.map(
-            (opt) => html`
+          ${enumValues.map((opt) => {
+            const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
+            return html`
               <div class="radio-item">
                 <input
                   type="radio"
-                  id="${fieldPath}-${opt}"
+                  id="${sanitizedId}"
                   name="${fieldPath}"
                   value="${opt}"
                   .checked="${value === opt}"
                   @change="${(e) => this.handleInputChange(fieldPath, e)}"
                 />
-                <label for="${fieldPath}-${opt}">${opt}</label>
+                <label for="${sanitizedId}">${opt}</label>
               </div>
-            `
-          )}
+            `;
+          })}
         </div>
       `;
     }
