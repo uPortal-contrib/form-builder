@@ -588,3 +588,827 @@ describe('FormBuilder', () => {
     });
   });
 });
+
+describe('FormBuilder - Nested Objects', () => {
+  let element;
+  let fetchStub;
+
+  // Mock schema with nested objects (like communication-preferences)
+  const mockNestedSchema = {
+    title: 'Communication Preferences',
+    description: 'Please review your contact information',
+    type: 'object',
+    properties: {
+      contact_information: {
+        title: 'Contact Information',
+        description: 'Your contact details',
+        type: 'object',
+        required: ['email_address'],
+        properties: {
+          primary_cell_number: {
+            title: 'Primary Cell Number',
+            type: 'string',
+            pattern: '^\\d{3}-\\d{3}-\\d{4}$',
+          },
+          email_address: {
+            title: 'Email Address',
+            type: 'string',
+            format: 'email',
+          },
+        },
+      },
+      channels: {
+        description: 'Notification channels',
+        type: 'object',
+        properties: {
+          taco_truck: {
+            title: 'Taco Truck',
+            type: 'object',
+            properties: {
+              receive: {
+                title: 'Receive Notifications',
+                type: 'string',
+                enum: ['Yes', 'No'],
+              },
+            },
+          },
+        },
+      },
+      preserve_selections: {
+        description: 'Preserve your selections',
+        type: 'boolean',
+      },
+    },
+  };
+
+  const mockNestedFormData = {
+    contact_information: {
+      primary_cell_number: '555-123-4567',
+      email_address: 'test@example.com',
+    },
+    channels: {
+      taco_truck: {
+        receive: 'Yes',
+      },
+    },
+    preserve_selections: true,
+  };
+
+  const mockSchemaResp = {
+    fname: 'communication-preferences',
+    version: 1,
+    schema: mockNestedSchema,
+    metadata: {},
+  };
+
+  beforeEach(() => {
+    fetchStub = stub(window, 'fetch');
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  describe('Nested Object Rendering', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: mockNestedFormData }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should render nested object containers', () => {
+      const nestedContainers = element.shadowRoot.querySelectorAll('.nested-object');
+      expect(nestedContainers.length).to.be.greaterThan(0);
+      expect(nestedContainers.length).to.equal(2 + 1);
+    });
+
+    it('should render nested object titles and descriptions', () => {
+      const descriptions = element.shadowRoot.querySelectorAll('.nested-object-description');
+      expect(descriptions.length).to.be.greaterThan(0);
+      expect(descriptions.length).to.equal(2);
+    });
+
+    it('should render fields within nested objects', () => {
+      // Check for nested field inputs
+      const cellInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.primary_cell_number"]'
+      );
+      const emailInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.email_address"]'
+      );
+
+      expect(cellInput).to.exist;
+      expect(emailInput).to.exist;
+    });
+
+    it('should load nested form data correctly', () => {
+      const cellInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.primary_cell_number"]'
+      );
+      const emailInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.email_address"]'
+      );
+
+      expect(cellInput.value).to.equal('555-123-4567');
+      expect(emailInput.value).to.equal('test@example.com');
+    });
+
+    it('should render deeply nested objects (3 levels)', () => {
+      const tacoReceiveSelect = element.shadowRoot.querySelector(
+        'select[name="channels.taco_truck.receive"]'
+      );
+
+      expect(tacoReceiveSelect).to.exist;
+      expect(tacoReceiveSelect.value).to.equal('Yes');
+    });
+
+    it('should render non-nested fields alongside nested ones', () => {
+      const preserveCheckbox = element.shadowRoot.querySelector(
+        'input[name="preserve_selections"]'
+      );
+
+      expect(preserveCheckbox).to.exist;
+      expect(preserveCheckbox.type).to.equal('checkbox');
+      expect(preserveCheckbox.checked).to.be.true;
+    });
+  });
+
+  describe('Nested Object Input Handling', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should update nested formData on input change', async () => {
+      const cellInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.primary_cell_number"]'
+      );
+
+      cellInput.value = '555-999-8888';
+      cellInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await element.updateComplete;
+
+      expect(element.formData.contact_information.primary_cell_number).to.equal('555-999-8888');
+    });
+
+    it('should handle multiple nested levels correctly', async () => {
+      const tacoSelect = element.shadowRoot.querySelector(
+        'select[name="channels.taco_truck.receive"]'
+      );
+
+      tacoSelect.value = 'No';
+      tacoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      await element.updateComplete;
+
+      expect(element.formData.channels.taco_truck.receive).to.equal('No');
+    });
+
+    it('should not affect sibling nested objects when updating', async () => {
+      const cellInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.primary_cell_number"]'
+      );
+      const tacoSelect = element.shadowRoot.querySelector(
+        'select[name="channels.taco_truck.receive"]'
+      );
+
+      cellInput.value = '555-111-2222';
+      cellInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      tacoSelect.value = 'Yes';
+      tacoSelect.dispatchEvent(new Event('change', { bubbles: true }));
+
+      await element.updateComplete;
+
+      expect(element.formData.contact_information.primary_cell_number).to.equal('555-111-2222');
+      expect(element.formData.channels.taco_truck.receive).to.equal('Yes');
+    });
+
+    it('should clear nested field error on input change', async () => {
+      // Trigger validation to create a real error
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      // Verify error exists for empty nested field
+      expect(element.fieldErrors['contact_information.email_address']).to.exist;
+
+      const errorMessages = element.shadowRoot.querySelectorAll('.error-message');
+      expect(errorMessages.length).to.be.greaterThan(0);
+
+      // Type into the nested field
+      const emailInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.email_address"]'
+      );
+      emailInput.value = 'valid@example.com';
+      emailInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await element.updateComplete;
+
+      // Error should be cleared
+      expect(element.fieldErrors['contact_information.email_address']).to.be.undefined;
+    });
+  });
+
+  describe('Nested Object Validation', () => {
+    beforeEach(async () => {
+      // Schema with required nested fields
+      const schemaWithRequired = {
+        ...mockNestedSchema,
+        properties: {
+          ...mockNestedSchema.properties,
+          contact_information: {
+            ...mockNestedSchema.properties.contact_information,
+            required: ['email_address'],
+          },
+        },
+      };
+
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => ({ ...mockSchemaResp, schema: schemaWithRequired }),
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should validate required nested fields', async () => {
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      expect(element.fieldErrors['contact_information.email_address']).to.equal(
+        'This field is required'
+      );
+    });
+
+    it('should validate pattern in nested fields', async () => {
+      element.formData = {
+        contact_information: {
+          primary_cell_number: 'invalid-format',
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.false;
+      expect(element.fieldErrors['contact_information.primary_cell_number']).to.exist;
+      expect(element.fieldErrors['contact_information.primary_cell_number']).to.equal(
+        'Invalid format'
+      );
+    });
+
+    it('should validate email format in nested fields', async () => {
+      element.formData = {
+        contact_information: {
+          email_address: 'not-an-email',
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.false;
+      expect(element.fieldErrors['contact_information.email_address']).to.equal(
+        'Invalid email address'
+      );
+    });
+
+    it('should pass validation with valid nested data', () => {
+      element.formData = {
+        contact_information: {
+          primary_cell_number: '555-123-4567',
+          email_address: 'valid@example.com',
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.true;
+      expect(Object.keys(element.fieldErrors)).to.have.lengthOf(0);
+    });
+
+    it('should display error messages in UI for nested fields', async () => {
+      // Submit form with invalid nested data
+      element.formData = {
+        contact_information: {
+          email_address: 'invalid-email',
+          primary_cell_number: 'wrong-format',
+        },
+      };
+
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      // Check that error messages are rendered in the DOM
+      const emailErrorMsg = Array.from(element.shadowRoot.querySelectorAll('.error-message')).find(
+        (el) => el.textContent.includes('Invalid email address')
+      );
+
+      const phoneErrorMsg = Array.from(element.shadowRoot.querySelectorAll('.error-message')).find(
+        (el) => el.textContent.includes('Invalid format')
+      );
+
+      expect(emailErrorMsg).to.exist;
+      expect(phoneErrorMsg).to.exist;
+
+      // Verify errors are displayed next to the correct fields
+      const emailInput = element.shadowRoot.querySelector(
+        'input[name="contact_information.email_address"]'
+      );
+      const emailFormGroup = emailInput.closest('.form-group');
+      const emailError = emailFormGroup.querySelector('.error-message');
+
+      expect(emailError).to.exist;
+      expect(emailError.textContent).to.include('Invalid email address');
+    });
+  });
+
+  describe('Nested Object Form Submission', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+      fetchStub.reset();
+    });
+
+    it('should submit nested form data structure', async () => {
+      element.formData = mockNestedFormData;
+
+      fetchStub.resolves({
+        ok: true,
+        json: async () => ({}),
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await waitUntil(() => fetchStub.called);
+
+      const [, options] = fetchStub.firstCall.args;
+      const body = JSON.parse(options.body);
+
+      expect(body.answers).to.deep.equal(mockNestedFormData);
+      expect(body.answers.contact_information.email_address).to.equal('test@example.com');
+      expect(body.answers.channels.taco_truck.receive).to.equal('Yes');
+    });
+  });
+
+  describe('Helper Methods', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: mockNestedFormData }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should get nested value using dot notation', () => {
+      const value = element.getNestedValue('contact_information.email_address');
+      expect(value).to.equal('test@example.com');
+    });
+
+    it('should get deeply nested value', () => {
+      const value = element.getNestedValue('channels.taco_truck.receive');
+      expect(value).to.equal('Yes');
+    });
+
+    it('should return undefined for non-existent path', () => {
+      const value = element.getNestedValue('does.not.exist');
+      expect(value).to.be.undefined;
+    });
+
+    it('should set nested value using dot notation', () => {
+      element.setNestedValue('contact_information.email_address', 'new@example.com');
+      expect(element.formData.contact_information.email_address).to.equal('new@example.com');
+    });
+
+    it('should create nested structure if it does not exist', () => {
+      element.formData = {};
+      element.setNestedValue('new.nested.value', 'test');
+
+      // Verify the final value
+      expect(element.formData.new.nested.value).to.equal('test');
+
+      // Verify intermediate structure was created correctly
+      expect(element.formData.new).to.exist;
+      expect(element.formData.new).to.be.an('object');
+
+      expect(element.formData.new.nested).to.exist;
+      expect(element.formData.new.nested).to.be.an('object');
+
+      // Verify the complete path
+      expect(element.formData).to.have.nested.property('new.nested.value', 'test');
+    });
+  });
+
+  describe('getSchemaAtPath Helper Method', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should return top-level schema for empty path', () => {
+      const schema = element.getSchemaAtPath('');
+      expect(schema).to.equal(element.schema);
+    });
+
+    it('should return nested object schema for single-level path', () => {
+      const schema = element.getSchemaAtPath('contact_information');
+      expect(schema).to.exist;
+      expect(schema.type).to.equal('object');
+      expect(schema.properties).to.exist;
+      expect(schema.properties.primary_cell_number).to.exist;
+    });
+
+    it('should return deeply nested schema for multi-level path', () => {
+      const schema = element.getSchemaAtPath('channels.taco_truck');
+      expect(schema).to.exist;
+      expect(schema.type).to.equal('object');
+      expect(schema.properties.receive).to.exist;
+    });
+
+    it('should return null for non-existent path', () => {
+      const schema = element.getSchemaAtPath('does_not_exist');
+      expect(schema).to.be.null;
+    });
+
+    it('should return null for partially valid path', () => {
+      const schema = element.getSchemaAtPath('contact_information.does_not_exist');
+      expect(schema).to.be.null;
+    });
+
+    it('should return null when traversing through non-object field', () => {
+      // Try to traverse through preserve_selections (boolean) as if it were an object
+      const schema = element.getSchemaAtPath('preserve_selections.invalid');
+      expect(schema).to.be.null;
+    });
+
+    it('should handle schemas with required arrays', () => {
+      // Modify schema to add required fields
+      element.schema.properties.contact_information.required = ['email_address'];
+
+      const schema = element.getSchemaAtPath('contact_information');
+      expect(schema.required).to.deep.equal(['email_address']);
+    });
+
+    it('should correctly navigate to leaf fields', () => {
+      const schema = element.getSchemaAtPath('channels.taco_truck');
+      expect(schema.properties.receive.enum).to.deep.equal(['Yes', 'No']);
+    });
+  });
+  describe('Helper Methods Edge Cases', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: mockNestedFormData }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    describe('getNestedValue edge cases', () => {
+      it('should return undefined for empty string path', () => {
+        const value = element.getNestedValue('');
+        expect(value).to.be.undefined;
+      });
+
+      it('should return undefined for null path', () => {
+        const value = element.getNestedValue(null);
+        expect(value).to.be.undefined;
+      });
+
+      it('should return undefined for undefined path', () => {
+        const value = element.getNestedValue(undefined);
+        expect(value).to.be.undefined;
+      });
+
+      it('should handle paths with double dots by treating as single dot', () => {
+        const value = element.getNestedValue('contact_information..email_address');
+        expect(value).to.equal('test@example.com');
+      });
+
+      it('should handle paths with leading dot', () => {
+        const value = element.getNestedValue('.contact_information.email_address');
+        expect(value).to.equal('test@example.com');
+      });
+
+      it('should handle paths with trailing dot', () => {
+        const value = element.getNestedValue('contact_information.email_address.');
+        expect(value).to.equal('test@example.com');
+      });
+
+      it('should return undefined for non-string paths', () => {
+        const value = element.getNestedValue(123);
+        expect(value).to.be.undefined;
+      });
+
+      it('should return undefined for object paths', () => {
+        const value = element.getNestedValue({ path: 'test' });
+        expect(value).to.be.undefined;
+      });
+
+      it('should return undefined for array paths', () => {
+        const value = element.getNestedValue(['contact_information', 'email_address']);
+        expect(value).to.be.undefined;
+      });
+    });
+
+    describe('setNestedValue edge cases', () => {
+      it('should do nothing for empty string path', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue('', 'test');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should do nothing for null path', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue(null, 'test');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should do nothing for undefined path', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue(undefined, 'test');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should handle paths with double dots by treating as single dot', () => {
+        element.setNestedValue('contact_information..new_field', 'test-value');
+        expect(element.formData.contact_information.new_field).to.equal('test-value');
+      });
+
+      it('should handle paths with leading dot', () => {
+        element.setNestedValue('.contact_information.new_field', 'test-value');
+        expect(element.formData.contact_information.new_field).to.equal('test-value');
+      });
+
+      it('should handle paths with trailing dot', () => {
+        element.setNestedValue('contact_information.new_field.', 'test-value');
+        expect(element.formData.contact_information.new_field).to.equal('test-value');
+      });
+
+      it('should do nothing for non-string paths', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue(123, 'test');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should do nothing for object paths', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue({ path: 'test' }, 'value');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should do nothing for array paths', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue(['contact_information', 'email'], 'value');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+    });
+
+    describe('getSchemaAtPath edge cases', () => {
+      it('should return root schema for null path', () => {
+        const schema = element.getSchemaAtPath(null);
+        expect(schema).to.equal(element.schema);
+      });
+
+      it('should return root schema for undefined path', () => {
+        const schema = element.getSchemaAtPath(undefined);
+        expect(schema).to.equal(element.schema);
+      });
+
+      it('should handle paths with double dots', () => {
+        const schema = element.getSchemaAtPath('contact_information..primary_cell_number');
+        // Should navigate correctly by filtering empty segments
+        expect(schema).to.exist;
+      });
+
+      it('should handle paths with leading dot', () => {
+        const schema = element.getSchemaAtPath('.contact_information');
+        expect(schema).to.exist;
+        expect(schema.type).to.equal('object');
+      });
+
+      it('should handle paths with trailing dot', () => {
+        const schema = element.getSchemaAtPath('contact_information.');
+        expect(schema).to.exist;
+        expect(schema.type).to.equal('object');
+      });
+    });
+  });
+
+  describe('Nested Required Fields', () => {
+    beforeEach(async () => {
+      // Schema with required fields at different nesting levels
+      const schemaWithNestedRequired = {
+        title: 'Test Form',
+        type: 'object',
+        required: ['top_level_field'], // Top-level required
+        properties: {
+          top_level_field: {
+            type: 'string',
+            title: 'Top Level Field',
+          },
+          contact_info: {
+            type: 'object',
+            title: 'Contact Information',
+            required: ['email', 'phone'], // Nested required fields
+            properties: {
+              email: {
+                type: 'string',
+                title: 'Email',
+                format: 'email',
+              },
+              phone: {
+                type: 'string',
+                title: 'Phone',
+              },
+              optional_field: {
+                type: 'string',
+                title: 'Optional',
+              },
+            },
+          },
+          not_required: {
+            type: 'string',
+            title: 'Not Required',
+          },
+        },
+      };
+
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => ({
+          fname: 'test-form',
+          version: 1,
+          schema: schemaWithNestedRequired,
+          metadata: {},
+        }),
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should mark top-level required fields with asterisk', () => {
+      const topLevelLabel = element.shadowRoot.querySelector('label[for="top_level_field"]');
+      expect(topLevelLabel.classList.contains('required')).to.be.true;
+    });
+
+    it('should mark nested required fields with asterisk', () => {
+      const emailLabel = element.shadowRoot.querySelector('label[for="contact_info.email"]');
+      const phoneLabel = element.shadowRoot.querySelector('label[for="contact_info.phone"]');
+
+      expect(emailLabel.classList.contains('required')).to.be.true;
+      expect(phoneLabel.classList.contains('required')).to.be.true;
+    });
+
+    it('should NOT mark nested optional fields with asterisk', () => {
+      const optionalLabel = element.shadowRoot.querySelector(
+        'label[for="contact_info.optional_field"]'
+      );
+      expect(optionalLabel.classList.contains('required')).to.be.false;
+    });
+
+    it('should NOT mark top-level optional fields with asterisk', () => {
+      const notRequiredLabel = element.shadowRoot.querySelector('label[for="not_required"]');
+      expect(notRequiredLabel.classList.contains('required')).to.be.false;
+    });
+
+    it('should validate nested required fields correctly', () => {
+      element.formData = {
+        top_level_field: 'filled',
+        contact_info: {
+          optional_field: 'filled',
+          // email and phone missing
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.false;
+      expect(element.fieldErrors['contact_info.email']).to.equal('This field is required');
+      expect(element.fieldErrors['contact_info.phone']).to.equal('This field is required');
+      expect(element.fieldErrors['contact_info.optional_field']).to.be.undefined;
+    });
+
+    it('should pass validation when nested required fields are filled', () => {
+      element.formData = {
+        top_level_field: 'filled',
+        contact_info: {
+          email: 'test@example.com',
+          phone: '555-1234',
+        },
+      };
+
+      const isValid = element.validateForm();
+
+      expect(isValid).to.be.true;
+      expect(Object.keys(element.fieldErrors)).to.have.lengthOf(0);
+    });
+  });
+});
