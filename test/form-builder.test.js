@@ -600,6 +600,7 @@ describe('FormBuilder - Nested Objects', () => {
     type: 'object',
     properties: {
       contact_information: {
+        title: 'Contact Information',
         description: 'Your contact details',
         type: 'object',
         required: ['email_address'],
@@ -895,6 +896,9 @@ describe('FormBuilder - Nested Objects', () => {
 
       expect(isValid).to.be.false;
       expect(element.fieldErrors['contact_information.primary_cell_number']).to.exist;
+      expect(element.fieldErrors['contact_information.primary_cell_number']).to.equal(
+        'Invalid format'
+      );
     });
 
     it('should validate email format in nested fields', async () => {
