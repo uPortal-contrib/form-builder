@@ -625,6 +625,7 @@ describe('FormBuilder - Nested Objects', () => {
             type: 'object',
             properties: {
               receive: {
+                title: 'Receive Notifications',
                 type: 'string',
                 enum: ['Yes', 'No'],
               },
@@ -690,12 +691,14 @@ describe('FormBuilder - Nested Objects', () => {
 
     it('should render nested object containers', () => {
       const nestedContainers = element.shadowRoot.querySelectorAll('.nested-object');
+      expect(nestedContainers.length).to.be.greaterThan(0);
       expect(nestedContainers.length).to.equal(2 + 1);
     });
 
     it('should render nested object titles and descriptions', () => {
       const descriptions = element.shadowRoot.querySelectorAll('.nested-object-description');
       expect(descriptions.length).to.be.greaterThan(0);
+      expect(descriptions.length).to.equal(2);
     });
 
     it('should render fields within nested objects', () => {
@@ -1049,7 +1052,19 @@ describe('FormBuilder - Nested Objects', () => {
     it('should create nested structure if it does not exist', () => {
       element.formData = {};
       element.setNestedValue('new.nested.value', 'test');
+
+      // Verify the final value
       expect(element.formData.new.nested.value).to.equal('test');
+
+      // Verify intermediate structure was created correctly
+      expect(element.formData.new).to.exist;
+      expect(element.formData.new).to.be.an('object');
+
+      expect(element.formData.new.nested).to.exist;
+      expect(element.formData.new.nested).to.be.an('object');
+
+      // Verify the complete path
+      expect(element.formData).to.have.nested.property('new.nested.value', 'test');
     });
   });
 
