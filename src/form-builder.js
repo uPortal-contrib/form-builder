@@ -153,6 +153,18 @@ class FormBuilder extends LitElement {
       align-items: center;
     }
 
+    .checkbox-group.inline,
+    .radio-group.inline {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .checkbox-group.inline .checkbox-item,
+    .radio-group.inline .radio-item {
+      margin-right: 0;
+    }
+
     .error-message {
       color: #c00;
       font-size: 0.875rem;
@@ -427,6 +439,28 @@ class FormBuilder extends LitElement {
     this.setNestedValue(fieldPath, newArray);
   }
 
+  handleCheckboxArrayChange(fieldPath, optionValue, event) {
+    const { checked } = event.target;
+    const currentArray = this.getNestedValue(fieldPath) || [];
+
+    let newArray;
+    if (checked) {
+      // Add to array if not already present
+      newArray = currentArray.includes(optionValue) ? currentArray : [...currentArray, optionValue];
+    } else {
+      // Remove from array
+      newArray = currentArray.filter((v) => v !== optionValue);
+    }
+
+    this.setNestedValue(fieldPath, newArray);
+
+    // Clear field error on change
+    if (this.fieldErrors[fieldPath]) {
+      this.fieldErrors = { ...this.fieldErrors };
+      delete this.fieldErrors[fieldPath];
+    }
+  }
+
   /**
    * Recursively validate form fields including nested objects
    */
@@ -661,9 +695,62 @@ class FormBuilder extends LitElement {
   }
 
   renderInput(fieldPath, fieldSchema, value, uiOptions) {
-    const { type, enum: enumValues, format } = fieldSchema;
+    const { type, enum: enumValues, format, items } = fieldSchema;
+    const widget = uiOptions['ui:widget'];
+    const isInline = uiOptions['ui:options']?.inline;
 
-    // Enum - render as select
+    // Array of enums - render as checkboxes
+    if (type === 'array' && items?.enum) {
+      const selectedValues = Array.isArray(value) ? value : [];
+      const containerClass = isInline ? 'checkbox-group inline' : 'checkbox-group';
+
+      return html`
+        <div class="${containerClass}">
+          ${items.enum.map(
+            (opt) => html`
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="${fieldPath}-${opt}"
+                  name="${fieldPath}"
+                  value="${opt}"
+                  .checked="${selectedValues.includes(opt)}"
+                  @change="${(e) => this.handleCheckboxArrayChange(fieldPath, opt, e)}"
+                />
+                <label for="${fieldPath}-${opt}">${opt}</label>
+              </div>
+            `
+          )}
+        </div>
+      `;
+    }
+
+    // Enum with radio widget - render as radio buttons
+    if (enumValues && widget === 'radio') {
+      const containerClass = isInline ? 'radio-group inline' : 'radio-group';
+
+      return html`
+        <div class="${containerClass}">
+          ${enumValues.map(
+            (opt) => html`
+              <div class="radio-item">
+                <input
+                  type="radio"
+                  id="${fieldPath}-${opt}"
+                  name="${fieldPath}"
+                  value="${opt}"
+                  .checked="${value === opt}"
+                  @change="${(e) => this.handleInputChange(fieldPath, e)}"
+                />
+                <label for="${fieldPath}-${opt}">${opt}</label>
+              </div>
+            `
+          )}
+        </div>
+      `;
+    }
+
+    // Enum - render as select (default)
     if (enumValues) {
       return html`
         <select
