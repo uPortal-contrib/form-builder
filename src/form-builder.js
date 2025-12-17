@@ -382,7 +382,7 @@ class FormBuilder extends LitElement {
 
   /**
    * Sanitize a string for use as an HTML ID
-   * Replaces spaces and special characters with hyphens
+   * Replaces spaces and special characters with hyphens and collapses consecutive hyphens
    */
   sanitizeId(str) {
     return str.replace(/[^a-zA-Z0-9-_.]/g, '-').replace(/-+/g, '-');
