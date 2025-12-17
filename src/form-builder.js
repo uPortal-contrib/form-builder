@@ -383,9 +383,30 @@ class FormBuilder extends LitElement {
   /**
    * Sanitize a string for use as an HTML ID
    * Replaces spaces and special characters with hyphens and collapses consecutive hyphens
+   * Ensures the ID starts with a letter by adding a prefix if necessary
    */
   sanitizeId(str) {
-    return str.replace(/[^a-zA-Z0-9-_.]/g, '-').replace(/-+/g, '-');
+    if (typeof str !== 'string') {
+      str = String(str ?? '');
+    }
+
+    // Replace invalid characters and collapse multiple hyphens
+    let sanitized = str.replace(/[^a-zA-Z0-9-_.]/g, '-').replace(/-+/g, '-');
+
+    // Trim leading/trailing hyphens that may have been introduced
+    sanitized = sanitized.replace(/^-+/, '').replace(/-+$/, '');
+
+    // Ensure we have some content
+    if (!sanitized) {
+      sanitized = 'id';
+    }
+
+    // Ensure the ID starts with a letter
+    if (!/^[A-Za-z]/.test(sanitized)) {
+      sanitized = 'id-' + sanitized;
+    }
+
+    return sanitized;
   }
 
   /**
