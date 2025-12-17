@@ -1412,3 +1412,434 @@ describe('FormBuilder - Nested Objects', () => {
     });
   });
 });
+
+describe('Radio Buttons and Checkboxes', () => {
+  let element;
+  let fetchStub;
+
+  const mockSchemaWithRadioAndCheckbox = {
+    title: 'Communication Preferences',
+    type: 'object',
+    properties: {
+      channels: {
+        type: 'object',
+        properties: {
+          taco_truck: {
+            type: 'object',
+            properties: {
+              receive: {
+                type: 'string',
+                title: 'Receive Updates',
+                enum: ['Yes', 'No'],
+              },
+              locations: {
+                type: 'array',
+                title: 'Locations',
+                items: {
+                  type: 'string',
+                  enum: ['Fresno City College', 'Clovis Community College', 'Reedley College'],
+                },
+                uniqueItems: true,
+              },
+            },
+          },
+        },
+      },
+    },
+  };
+
+  const mockUiSchemaWithWidgets = {
+    channels: {
+      taco_truck: {
+        receive: {
+          'ui:widget': 'radio',
+          'ui:options': {
+            inline: true,
+          },
+        },
+        locations: {
+          'ui:widget': 'checkboxes',
+          'ui:options': {
+            inline: true,
+          },
+        },
+      },
+    },
+  };
+
+  beforeEach(() => {
+    fetchStub = stub(window, 'fetch');
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  describe('Radio Button Rendering', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => ({
+          fname: 'comm-prefs',
+          version: 1,
+          schema: mockSchemaWithRadioAndCheckbox,
+          metadata: mockUiSchemaWithWidgets,
+        }),
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder fbms-base-url="/api" fbms-form-fname="comm-prefs"></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should render radio buttons for enum with radio widget', () => {
+      const radioInputs = element.shadowRoot.querySelectorAll(
+        'input[type="radio"][name="channels.taco_truck.receive"]'
+      );
+
+      expect(radioInputs).to.have.lengthOf(2); // Yes and No
+    });
+
+    it('should render radio buttons with correct values', () => {
+      const radioInputs = element.shadowRoot.querySelectorAll(
+        'input[type="radio"][name="channels.taco_truck.receive"]'
+      );
+
+      const values = Array.from(radioInputs).map((input) => input.value);
+      expect(values).to.include('Yes');
+      expect(values).to.include('No');
+    });
+
+    it('should render radio buttons inline when ui:options.inline is true', () => {
+      const radioGroup = element.shadowRoot.querySelector('.radio-group.inline');
+      expect(radioGroup).to.exist;
+    });
+
+    it('should render labels for radio buttons', () => {
+      const labels = element.shadowRoot.querySelectorAll(
+        'label[for^="channels.taco_truck.receive-"]'
+      );
+
+      expect(labels).to.have.lengthOf(2);
+      const labelTexts = Array.from(labels).map((l) => l.textContent);
+      expect(labelTexts).to.include('Yes');
+      expect(labelTexts).to.include('No');
+    });
+  });
+
+  describe('Radio Button Interaction', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => ({
+          fname: 'comm-prefs',
+          version: 1,
+          schema: mockSchemaWithRadioAndCheckbox,
+          metadata: mockUiSchemaWithWidgets,
+        }),
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({
+          answers: {
+            channels: {
+              taco_truck: {
+                receive: 'Yes',
+              },
+            },
+          },
+        }),
+      });
+
+      element = await fixture(html`
+        <form-builder fbms-base-url="/api" fbms-form-fname="comm-prefs"></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should display pre-selected radio button value', () => {
+      const yesRadio = element.shadowRoot.querySelector(
+        'input[value="Yes"][name="channels.taco_truck.receive"]'
+      );
+
+      expect(yesRadio.checked).to.be.true;
+    });
+
+    it('should update formData when radio button is clicked', async () => {
+      const noRadio = element.shadowRoot.querySelector(
+        'input[value="No"][name="channels.taco_truck.receive"]'
+      );
+
+      noRadio.click();
+      await element.updateComplete;
+
+      expect(element.formData.channels.taco_truck.receive).to.equal('No');
+    });
+
+    it('should uncheck previous radio when new one is selected', async () => {
+      const yesRadio = element.shadowRoot.querySelector(
+        'input[value="Yes"][name="channels.taco_truck.receive"]'
+      );
+      const noRadio = element.shadowRoot.querySelector(
+        'input[value="No"][name="channels.taco_truck.receive"]'
+      );
+
+      expect(yesRadio.checked).to.be.true;
+
+      noRadio.click();
+      await element.updateComplete;
+
+      expect(yesRadio.checked).to.be.false;
+      expect(noRadio.checked).to.be.true;
+    });
+  });
+
+  describe('Checkbox Array Rendering', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => ({
+          fname: 'comm-prefs',
+          version: 1,
+          schema: mockSchemaWithRadioAndCheckbox,
+          metadata: mockUiSchemaWithWidgets,
+        }),
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder fbms-base-url="/api" fbms-form-fname="comm-prefs"></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should render checkboxes for array with enum items', () => {
+      const checkboxes = element.shadowRoot.querySelectorAll(
+        'input[type="checkbox"][name="channels.taco_truck.locations"]'
+      );
+
+      expect(checkboxes).to.have.lengthOf(3); // Three locations
+    });
+
+    it('should render checkboxes with correct values', () => {
+      const checkboxes = element.shadowRoot.querySelectorAll(
+        'input[type="checkbox"][name="channels.taco_truck.locations"]'
+      );
+
+      const values = Array.from(checkboxes).map((input) => input.value);
+      expect(values).to.include('Fresno City College');
+      expect(values).to.include('Clovis Community College');
+      expect(values).to.include('Reedley College');
+    });
+
+    it('should render checkboxes inline when ui:options.inline is true', () => {
+      const checkboxGroup = element.shadowRoot.querySelector('.checkbox-group.inline');
+      expect(checkboxGroup).to.exist;
+    });
+
+    it('should render labels for checkboxes', () => {
+      const labels = element.shadowRoot.querySelectorAll(
+        'label[for^="channels.taco_truck.locations-"]'
+      );
+
+      expect(labels).to.have.lengthOf(3);
+      const labelTexts = Array.from(labels).map((l) => l.textContent);
+      expect(labelTexts).to.include('Fresno City College');
+    });
+  });
+
+  describe('Checkbox Array Interaction', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => ({
+          fname: 'comm-prefs',
+          version: 1,
+          schema: mockSchemaWithRadioAndCheckbox,
+          metadata: mockUiSchemaWithWidgets,
+        }),
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({
+          answers: {
+            channels: {
+              taco_truck: {
+                locations: ['Fresno City College'],
+              },
+            },
+          },
+        }),
+      });
+
+      element = await fixture(html`
+        <form-builder fbms-base-url="/api" fbms-form-fname="comm-prefs"></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should display pre-selected checkbox values', () => {
+      const fresnoCheckbox = element.shadowRoot.querySelector(
+        'input[value="Fresno City College"][name="channels.taco_truck.locations"]'
+      );
+
+      expect(fresnoCheckbox.checked).to.be.true;
+    });
+
+    it('should add value to array when checkbox is checked', async () => {
+      const clovisCheckbox = element.shadowRoot.querySelector(
+        'input[value="Clovis Community College"][name="channels.taco_truck.locations"]'
+      );
+
+      clovisCheckbox.click();
+      await element.updateComplete;
+
+      expect(element.formData.channels.taco_truck.locations).to.include('Clovis Community College');
+      expect(element.formData.channels.taco_truck.locations).to.include('Fresno City College');
+    });
+
+    it('should remove value from array when checkbox is unchecked', async () => {
+      const fresnoCheckbox = element.shadowRoot.querySelector(
+        'input[value="Fresno City College"][name="channels.taco_truck.locations"]'
+      );
+
+      expect(fresnoCheckbox.checked).to.be.true;
+
+      fresnoCheckbox.click();
+      await element.updateComplete;
+
+      expect(element.formData.channels.taco_truck.locations).to.not.include('Fresno City College');
+    });
+
+    it('should support multiple selections', async () => {
+      const clovisCheckbox = element.shadowRoot.querySelector(
+        'input[value="Clovis Community College"][name="channels.taco_truck.locations"]'
+      );
+      const reedleyCheckbox = element.shadowRoot.querySelector(
+        'input[value="Reedley College"][name="channels.taco_truck.locations"]'
+      );
+
+      clovisCheckbox.click();
+      await element.updateComplete;
+
+      reedleyCheckbox.click();
+      await element.updateComplete;
+
+      expect(element.formData.channels.taco_truck.locations).to.have.lengthOf(3);
+      expect(element.formData.channels.taco_truck.locations).to.include('Fresno City College');
+      expect(element.formData.channels.taco_truck.locations).to.include('Clovis Community College');
+      expect(element.formData.channels.taco_truck.locations).to.include('Reedley College');
+    });
+
+    it('should initialize empty array when no checkboxes selected', async () => {
+      // Start fresh with no selections
+      element.formData = { channels: { taco_truck: {} } };
+      await element.updateComplete;
+
+      const fresnoCheckbox = element.shadowRoot.querySelector(
+        'input[value="Fresno City College"][name="channels.taco_truck.locations"]'
+      );
+
+      fresnoCheckbox.click();
+      await element.updateComplete;
+
+      expect(element.formData.channels.taco_truck.locations).to.be.an('array');
+      expect(element.formData.channels.taco_truck.locations).to.have.lengthOf(1);
+    });
+
+    it('should not add duplicate values to array', async () => {
+      const clovisCheckbox = element.shadowRoot.querySelector(
+        'input[value="Clovis Community College"][name="channels.taco_truck.locations"]'
+      );
+
+      // Check it
+      clovisCheckbox.click();
+      await element.updateComplete;
+
+      // Uncheck it
+      clovisCheckbox.click();
+      await element.updateComplete;
+
+      // Check it again
+      clovisCheckbox.click();
+      await element.updateComplete;
+
+      const locations = element.formData.channels.taco_truck.locations;
+      const clovisCount = locations.filter((loc) => loc === 'Clovis Community College').length;
+
+      expect(clovisCount).to.equal(1);
+    });
+
+    it('should clear field error when checkbox is changed', async () => {
+      element.fieldErrors = { 'channels.taco_truck.locations': 'Required' };
+      await element.updateComplete;
+
+      const clovisCheckbox = element.shadowRoot.querySelector(
+        'input[value="Clovis Community College"][name="channels.taco_truck.locations"]'
+      );
+
+      clovisCheckbox.click();
+      await element.updateComplete;
+
+      expect(element.fieldErrors['channels.taco_truck.locations']).to.be.undefined;
+    });
+  });
+
+  describe('Fallback to Select for Enum without Widget', () => {
+    beforeEach(async () => {
+      const schemaWithPlainEnum = {
+        ...mockSchemaWithRadioAndCheckbox,
+        properties: {
+          ...mockSchemaWithRadioAndCheckbox.properties,
+          simple_choice: {
+            type: 'string',
+            title: 'Simple Choice',
+            enum: ['Option A', 'Option B', 'Option C'],
+          },
+        },
+      };
+
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => ({
+          fname: 'comm-prefs',
+          version: 1,
+          schema: schemaWithPlainEnum,
+          metadata: mockUiSchemaWithWidgets,
+        }),
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder fbms-base-url="/api" fbms-form-fname="comm-prefs"></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should render select dropdown for enum without ui:widget', () => {
+      const select = element.shadowRoot.querySelector('select[name="simple_choice"]');
+      expect(select).to.exist;
+
+      const radios = element.shadowRoot.querySelectorAll(
+        'input[type="radio"][name="simple_choice"]'
+      );
+      expect(radios).to.have.lengthOf(0);
+    });
+  });
+});

@@ -130,6 +130,15 @@ class FormBuilder extends LitElement {
       box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
     }
 
+    select[multiple] {
+      min-height: 120px;
+      padding: 4px;
+    }
+
+    select[multiple] option {
+      padding: 4px 8px;
+    }
+
     textarea {
       min-height: 100px;
       resize: vertical;
@@ -151,6 +160,18 @@ class FormBuilder extends LitElement {
     .radio-item {
       display: flex;
       align-items: center;
+    }
+
+    .checkbox-group.inline,
+    .radio-group.inline {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .checkbox-group.inline .checkbox-item,
+    .radio-group.inline .radio-item {
+      margin-right: 0;
     }
 
     .error-message {
@@ -360,6 +381,35 @@ class FormBuilder extends LitElement {
   }
 
   /**
+   * Sanitize a string for use as an HTML ID
+   * Replaces spaces and special characters with hyphens and collapses consecutive hyphens
+   * Ensures the ID starts with a letter by adding a prefix if necessary
+   */
+  sanitizeId(str) {
+    if (typeof str !== 'string') {
+      str = String(str ?? '');
+    }
+
+    // Replace invalid characters and collapse multiple hyphens
+    let sanitized = str.replace(/[^a-zA-Z0-9-_.]/g, '-').replace(/-+/g, '-');
+
+    // Trim leading/trailing hyphens that may have been introduced
+    sanitized = sanitized.replace(/^-+/, '').replace(/-+$/, '');
+
+    // Ensure we have some content
+    if (!sanitized) {
+      sanitized = 'id';
+    }
+
+    // Ensure the ID starts with a letter
+    if (!/^[A-Za-z]/.test(sanitized)) {
+      sanitized = 'id-' + sanitized;
+    }
+
+    return sanitized;
+  }
+
+  /**
    * Set nested value in formData using dot notation path
    */
   setNestedValue(path, value) {
@@ -425,6 +475,41 @@ class FormBuilder extends LitElement {
     const newArray = [...currentArray];
     newArray[index] = event.target.value;
     this.setNestedValue(fieldPath, newArray);
+  }
+
+  handleMultiSelectChange(fieldPath, event) {
+    const selectedOptions = Array.from(event.target.selectedOptions);
+    const values = selectedOptions.map((option) => option.value);
+
+    this.setNestedValue(fieldPath, values);
+
+    // Clear field error on change
+    if (this.fieldErrors[fieldPath]) {
+      this.fieldErrors = { ...this.fieldErrors };
+      delete this.fieldErrors[fieldPath];
+    }
+  }
+
+  handleCheckboxArrayChange(fieldPath, optionValue, event) {
+    const { checked } = event.target;
+    const currentArray = this.getNestedValue(fieldPath) || [];
+
+    let newArray;
+    if (checked) {
+      // Add to array if not already present
+      newArray = currentArray.includes(optionValue) ? currentArray : [...currentArray, optionValue];
+    } else {
+      // Remove from array
+      newArray = currentArray.filter((v) => v !== optionValue);
+    }
+
+    this.setNestedValue(fieldPath, newArray);
+
+    // Clear field error on change
+    if (this.fieldErrors[fieldPath]) {
+      this.fieldErrors = { ...this.fieldErrors };
+      delete this.fieldErrors[fieldPath];
+    }
   }
 
   /**
@@ -661,9 +746,85 @@ class FormBuilder extends LitElement {
   }
 
   renderInput(fieldPath, fieldSchema, value, uiOptions) {
-    const { type, enum: enumValues, format } = fieldSchema;
+    const { type, enum: enumValues, format, items } = fieldSchema;
+    const widget = uiOptions['ui:widget'];
+    const isInline = uiOptions['ui:options']?.inline;
 
-    // Enum - render as select
+    // Array of enums with checkboxes widget - render as checkboxes
+    if (type === 'array' && items?.enum && widget === 'checkboxes') {
+      const selectedValues = Array.isArray(value) ? value : [];
+      const containerClass = isInline ? 'checkbox-group inline' : 'checkbox-group';
+
+      return html`
+        <div class="${containerClass}">
+          ${items.enum.map((opt) => {
+            const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
+            return html`
+              <div class="checkbox-item">
+                <input
+                  type="checkbox"
+                  id="${sanitizedId}"
+                  name="${fieldPath}"
+                  value="${opt}"
+                  .checked="${selectedValues.includes(opt)}"
+                  @change="${(e) => this.handleCheckboxArrayChange(fieldPath, opt, e)}"
+                />
+                <label for="${sanitizedId}">${opt}</label>
+              </div>
+            `;
+          })}
+        </div>
+      `;
+    }
+
+    // Array of enums without widget - render as multi-select dropdown (default)
+    if (type === 'array' && items?.enum) {
+      const selectedValues = Array.isArray(value) ? value : [];
+
+      return html`
+        <select
+          id="${fieldPath}"
+          name="${fieldPath}"
+          multiple
+          size="5"
+          @change="${(e) => this.handleMultiSelectChange(fieldPath, e)}"
+        >
+          ${items.enum.map(
+            (opt) => html`
+              <option value="${opt}" ?selected="${selectedValues.includes(opt)}">${opt}</option>
+            `
+          )}
+        </select>
+      `;
+    }
+
+    // Enum with radio widget - render as radio buttons
+    if (enumValues && widget === 'radio') {
+      const containerClass = isInline ? 'radio-group inline' : 'radio-group';
+
+      return html`
+        <div class="${containerClass}">
+          ${enumValues.map((opt) => {
+            const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
+            return html`
+              <div class="radio-item">
+                <input
+                  type="radio"
+                  id="${sanitizedId}"
+                  name="${fieldPath}"
+                  value="${opt}"
+                  .checked="${value === opt}"
+                  @change="${(e) => this.handleInputChange(fieldPath, e)}"
+                />
+                <label for="${sanitizedId}">${opt}</label>
+              </div>
+            `;
+          })}
+        </div>
+      `;
+    }
+
+    // Enum - render as select (default)
     if (enumValues) {
       return html`
         <select
