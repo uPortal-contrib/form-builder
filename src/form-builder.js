@@ -382,6 +382,8 @@ class FormBuilder extends LitElement {
    * e.g., "contact_information" => schema.properties.contact_information
    */
   getSchemaAtPath(path) {
+    if (!path) return this.schema; // Handle empty string/null/undefined
+
     const parts = path.split('.');
     let schema = this.schema;
 

@@ -690,7 +690,7 @@ describe('FormBuilder - Nested Objects', () => {
 
     it('should render nested object containers', () => {
       const nestedContainers = element.shadowRoot.querySelectorAll('.nested-object');
-      expect(nestedContainers.length).to.be.greaterThan(0);
+      expect(nestedContainers.length).to.equal(2 + 1);
     });
 
     it('should render nested object titles and descriptions', () => {
@@ -1050,6 +1050,77 @@ describe('FormBuilder - Nested Objects', () => {
       element.formData = {};
       element.setNestedValue('new.nested.value', 'test');
       expect(element.formData.new.nested.value).to.equal('test');
+    });
+  });
+
+  describe('getSchemaAtPath Helper Method', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    it('should return top-level schema for empty path', () => {
+      const schema = element.getSchemaAtPath('');
+      expect(schema).to.equal(element.schema);
+    });
+
+    it('should return nested object schema for single-level path', () => {
+      const schema = element.getSchemaAtPath('contact_information');
+      expect(schema).to.exist;
+      expect(schema.type).to.equal('object');
+      expect(schema.properties).to.exist;
+      expect(schema.properties.primary_cell_number).to.exist;
+    });
+
+    it('should return deeply nested schema for multi-level path', () => {
+      const schema = element.getSchemaAtPath('channels.taco_truck');
+      expect(schema).to.exist;
+      expect(schema.type).to.equal('object');
+      expect(schema.properties.receive).to.exist;
+    });
+
+    it('should return null for non-existent path', () => {
+      const schema = element.getSchemaAtPath('does_not_exist');
+      expect(schema).to.be.null;
+    });
+
+    it('should return null for partially valid path', () => {
+      const schema = element.getSchemaAtPath('contact_information.does_not_exist');
+      expect(schema).to.be.null;
+    });
+
+    it('should return null when traversing through non-object field', () => {
+      // Try to traverse through preserve_selections (boolean) as if it were an object
+      const schema = element.getSchemaAtPath('preserve_selections.invalid');
+      expect(schema).to.be.null;
+    });
+
+    it('should handle schemas with required arrays', () => {
+      // Modify schema to add required fields
+      element.schema.properties.contact_information.required = ['email_address'];
+
+      const schema = element.getSchemaAtPath('contact_information');
+      expect(schema.required).to.deep.equal(['email_address']);
+    });
+
+    it('should correctly navigate to leaf fields', () => {
+      const schema = element.getSchemaAtPath('channels.taco_truck');
+      expect(schema.properties.receive.enum).to.deep.equal(['Yes', 'No']);
     });
   });
 
