@@ -1123,6 +1123,157 @@ describe('FormBuilder - Nested Objects', () => {
       expect(schema.properties.receive.enum).to.deep.equal(['Yes', 'No']);
     });
   });
+  describe('Helper Methods Edge Cases', () => {
+    beforeEach(async () => {
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: mockNestedFormData }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="communication-preferences"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    describe('getNestedValue edge cases', () => {
+      it('should return undefined for empty string path', () => {
+        const value = element.getNestedValue('');
+        expect(value).to.be.undefined;
+      });
+
+      it('should return undefined for null path', () => {
+        const value = element.getNestedValue(null);
+        expect(value).to.be.undefined;
+      });
+
+      it('should return undefined for undefined path', () => {
+        const value = element.getNestedValue(undefined);
+        expect(value).to.be.undefined;
+      });
+
+      it('should handle paths with double dots by treating as single dot', () => {
+        const value = element.getNestedValue('contact_information..email_address');
+        expect(value).to.equal('test@example.com');
+      });
+
+      it('should handle paths with leading dot', () => {
+        const value = element.getNestedValue('.contact_information.email_address');
+        expect(value).to.equal('test@example.com');
+      });
+
+      it('should handle paths with trailing dot', () => {
+        const value = element.getNestedValue('contact_information.email_address.');
+        expect(value).to.equal('test@example.com');
+      });
+
+      it('should return undefined for non-string paths', () => {
+        const value = element.getNestedValue(123);
+        expect(value).to.be.undefined;
+      });
+
+      it('should return undefined for object paths', () => {
+        const value = element.getNestedValue({ path: 'test' });
+        expect(value).to.be.undefined;
+      });
+
+      it('should return undefined for array paths', () => {
+        const value = element.getNestedValue(['contact_information', 'email_address']);
+        expect(value).to.be.undefined;
+      });
+    });
+
+    describe('setNestedValue edge cases', () => {
+      it('should do nothing for empty string path', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue('', 'test');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should do nothing for null path', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue(null, 'test');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should do nothing for undefined path', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue(undefined, 'test');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should handle paths with double dots by treating as single dot', () => {
+        element.setNestedValue('contact_information..new_field', 'test-value');
+        expect(element.formData.contact_information.new_field).to.equal('test-value');
+      });
+
+      it('should handle paths with leading dot', () => {
+        element.setNestedValue('.contact_information.new_field', 'test-value');
+        expect(element.formData.contact_information.new_field).to.equal('test-value');
+      });
+
+      it('should handle paths with trailing dot', () => {
+        element.setNestedValue('contact_information.new_field.', 'test-value');
+        expect(element.formData.contact_information.new_field).to.equal('test-value');
+      });
+
+      it('should do nothing for non-string paths', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue(123, 'test');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should do nothing for object paths', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue({ path: 'test' }, 'value');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+
+      it('should do nothing for array paths', () => {
+        const originalData = { ...element.formData };
+        element.setNestedValue(['contact_information', 'email'], 'value');
+        expect(element.formData).to.deep.equal(originalData);
+      });
+    });
+
+    describe('getSchemaAtPath edge cases', () => {
+      it('should return root schema for null path', () => {
+        const schema = element.getSchemaAtPath(null);
+        expect(schema).to.equal(element.schema);
+      });
+
+      it('should return root schema for undefined path', () => {
+        const schema = element.getSchemaAtPath(undefined);
+        expect(schema).to.equal(element.schema);
+      });
+
+      it('should handle paths with double dots', () => {
+        const schema = element.getSchemaAtPath('contact_information..primary_cell_number');
+        // Should navigate correctly by filtering empty segments
+        expect(schema).to.exist;
+      });
+
+      it('should handle paths with leading dot', () => {
+        const schema = element.getSchemaAtPath('.contact_information');
+        expect(schema).to.exist;
+        expect(schema.type).to.equal('object');
+      });
+
+      it('should handle paths with trailing dot', () => {
+        const schema = element.getSchemaAtPath('contact_information.');
+        expect(schema).to.exist;
+        expect(schema.type).to.equal('object');
+      });
+    });
+  });
 
   describe('Nested Required Fields', () => {
     beforeEach(async () => {

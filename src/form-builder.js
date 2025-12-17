@@ -347,7 +347,11 @@ class FormBuilder extends LitElement {
    * e.g., "contact_information.email" => formData.contact_information.email
    */
   getNestedValue(path) {
-    const parts = path.split('.');
+    if (!path || typeof path !== 'string') return undefined;
+
+    const parts = path.split('.').filter((part) => part.length > 0);
+    if (parts.length === 0) return undefined;
+
     let value = this.formData;
     for (const part of parts) {
       value = value?.[part];
@@ -359,7 +363,11 @@ class FormBuilder extends LitElement {
    * Set nested value in formData using dot notation path
    */
   setNestedValue(path, value) {
-    const parts = path.split('.');
+    if (!path || typeof path !== 'string') return;
+
+    const parts = path.split('.').filter((part) => part.length > 0);
+    if (parts.length === 0) return;
+
     const newData = { ...this.formData };
     let current = newData;
 
@@ -376,7 +384,6 @@ class FormBuilder extends LitElement {
     current[parts[parts.length - 1]] = value;
     this.formData = newData;
   }
-
   /**
    * Get the schema object at a given path
    * e.g., "contact_information" => schema.properties.contact_information
@@ -384,7 +391,9 @@ class FormBuilder extends LitElement {
   getSchemaAtPath(path) {
     if (!path) return this.schema; // Handle empty string/null/undefined
 
-    const parts = path.split('.');
+    const parts = path.split('.').filter((part) => part.length > 0);
+    if (parts.length === 0) return this.schema; // All segments were empty
+
     let schema = this.schema;
 
     for (const part of parts) {
