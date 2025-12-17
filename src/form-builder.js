@@ -373,9 +373,12 @@ class FormBuilder extends LitElement {
 
     for (let i = 0; i < parts.length - 1; i++) {
       const part = parts[i];
-      if (!current[part] || typeof current[part] !== 'object') {
+      // Create new object if missing, not an object, or is an array
+      // Note: Arrays are not currently supported in schemas; if encountered, replace with object
+      if (!current[part] || typeof current[part] !== 'object' || Array.isArray(current[part])) {
         current[part] = {};
       } else {
+        // Clone existing object to maintain immutability
         current[part] = { ...current[part] };
       }
       current = current[part];
