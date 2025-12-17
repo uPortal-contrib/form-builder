@@ -130,6 +130,15 @@ class FormBuilder extends LitElement {
       box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
     }
 
+    select[multiple] {
+      min-height: 120px;
+      padding: 4px;
+    }
+
+    select[multiple] option {
+      padding: 4px 8px;
+    }
+
     textarea {
       min-height: 100px;
       resize: vertical;
@@ -439,6 +448,19 @@ class FormBuilder extends LitElement {
     this.setNestedValue(fieldPath, newArray);
   }
 
+  handleMultiSelectChange(fieldPath, event) {
+    const selectedOptions = Array.from(event.target.selectedOptions);
+    const values = selectedOptions.map((option) => option.value);
+
+    this.setNestedValue(fieldPath, values);
+
+    // Clear field error on change
+    if (this.fieldErrors[fieldPath]) {
+      this.fieldErrors = { ...this.fieldErrors };
+      delete this.fieldErrors[fieldPath];
+    }
+  }
+
   handleCheckboxArrayChange(fieldPath, optionValue, event) {
     const { checked } = event.target;
     const currentArray = this.getNestedValue(fieldPath) || [];
@@ -699,8 +721,8 @@ class FormBuilder extends LitElement {
     const widget = uiOptions['ui:widget'];
     const isInline = uiOptions['ui:options']?.inline;
 
-    // Array of enums - render as checkboxes
-    if (type === 'array' && items?.enum) {
+    // Array of enums with checkboxes widget - render as checkboxes
+    if (type === 'array' && items?.enum && widget === 'checkboxes') {
       const selectedValues = Array.isArray(value) ? value : [];
       const containerClass = isInline ? 'checkbox-group inline' : 'checkbox-group';
 
@@ -722,6 +744,27 @@ class FormBuilder extends LitElement {
             `
           )}
         </div>
+      `;
+    }
+
+    // Array of enums without widget - render as multi-select dropdown (default)
+    if (type === 'array' && items?.enum) {
+      const selectedValues = Array.isArray(value) ? value : [];
+
+      return html`
+        <select
+          id="${fieldPath}"
+          name="${fieldPath}"
+          multiple
+          size="5"
+          @change="${(e) => this.handleMultiSelectChange(fieldPath, e)}"
+        >
+          ${items.enum.map(
+            (opt) => html`
+              <option value="${opt}" ?selected="${selectedValues.includes(opt)}">${opt}</option>
+            `
+          )}
+        </select>
       `;
     }
 
