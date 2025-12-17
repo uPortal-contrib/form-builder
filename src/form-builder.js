@@ -149,6 +149,21 @@ class FormBuilder extends LitElement {
       margin-right: 8px;
     }
 
+    fieldset {
+      border: none;
+      padding: 0;
+      margin: 0;
+      min-width: 0; /* Fix for some browsers */
+    }
+
+    legend {
+      font-weight: 500;
+      color: #333;
+      padding: 0;
+      margin-bottom: 8px;
+      font-size: 1rem;
+    }
+
     .checkbox-group,
     .radio-group {
       display: flex;
@@ -709,13 +724,19 @@ class FormBuilder extends LitElement {
     }
     uiOptions = uiOptions || {};
 
+    const widget = uiOptions['ui:widget'];
+    const isGroupedInput = widget === 'radio' || widget === 'checkboxes';
+
     return html`
       <div class="form-group">
-        <label class="${required ? 'required' : ''}" for="${fieldPath}">
-          ${fieldSchema.title || fieldName}
-        </label>
-
-        ${fieldSchema.description
+        ${!isGroupedInput
+          ? html`
+              <label class="${required ? 'required' : ''}" for="${fieldPath}">
+                ${fieldSchema.title || fieldName}
+              </label>
+            `
+          : ''}
+        ${fieldSchema.description && !isGroupedInput
           ? html` <span class="description">${fieldSchema.description}</span> `
           : ''}
         ${this.renderInput(fieldPath, fieldSchema, value, uiOptions)}
@@ -756,7 +777,8 @@ class FormBuilder extends LitElement {
       const containerClass = isInline ? 'checkbox-group inline' : 'checkbox-group';
 
       return html`
-        <div class="${containerClass}">
+        <fieldset class="${containerClass}">
+          <legend>${fieldSchema.title || fieldPath.split('.').pop()}</legend>
           ${items.enum.map((opt) => {
             const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
             return html`
@@ -773,7 +795,7 @@ class FormBuilder extends LitElement {
               </div>
             `;
           })}
-        </div>
+        </fieldset>
       `;
     }
 
@@ -803,7 +825,8 @@ class FormBuilder extends LitElement {
       const containerClass = isInline ? 'radio-group inline' : 'radio-group';
 
       return html`
-        <div class="${containerClass}">
+        <fieldset class="${containerClass}">
+          <legend>${fieldSchema.title || fieldPath.split('.').pop()}</legend>
           ${enumValues.map((opt) => {
             const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
             return html`
@@ -820,7 +843,7 @@ class FormBuilder extends LitElement {
               </div>
             `;
           })}
-        </div>
+        </fieldset>
       `;
     }
 
