@@ -614,7 +614,7 @@ class FormBuilder extends LitElement {
     const error = this.fieldErrors[fieldPath];
     // For nested fields, check the parent schema's required array
     const parentSchema = basePath ? this.getSchemaAtPath(basePath) : this.schema;
-    const required = parentSchema.required?.includes(fieldName);
+    const required = parentSchema?.required?.includes(fieldName) ?? false;
     const uiSchemaPath = fieldPath.split('.');
     let uiOptions = this.uiSchema;
     for (const part of uiSchemaPath) {
