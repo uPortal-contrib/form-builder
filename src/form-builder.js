@@ -425,7 +425,13 @@ class FormBuilder extends LitElement {
   /**
    * Recursively validate form fields including nested objects
    */
-  validateFormFields(properties, required = [], basePath = '') {
+  validateFormFields(properties, required = [], basePath = '', depth = 0) {
+    const MAX_DEPTH = 10;
+    if (depth > MAX_DEPTH) {
+      console.warn(`Schema nesting exceeds maximum depth of ${MAX_DEPTH} at path: ${basePath}`);
+      return {};
+    }
+
     const errors = {};
 
     // Check required fields
@@ -447,7 +453,8 @@ class FormBuilder extends LitElement {
         const nestedErrors = this.validateFormFields(
           fieldSchema.properties,
           fieldSchema.required || [],
-          fieldPath
+          fieldPath,
+          depth + 1
         );
         Object.assign(errors, nestedErrors);
         return;
@@ -585,12 +592,18 @@ class FormBuilder extends LitElement {
   /**
    * Render a field - can be a simple input or a nested object
    */
-  renderField(fieldName, fieldSchema, basePath = '') {
+  renderField(fieldName, fieldSchema, basePath = '', depth = 0) {
+    const MAX_DEPTH = 10;
+    if (depth > MAX_DEPTH) {
+      console.warn(`Schema nesting exceeds maximum depth of ${MAX_DEPTH}`);
+      return html`<div class="error">Schema too deeply nested</div>`;
+    }
+
     const fieldPath = basePath ? `${basePath}.${fieldName}` : fieldName;
 
     // Handle nested objects with properties
     if (fieldSchema.type === 'object' && fieldSchema.properties) {
-      return this.renderNestedObject(fieldName, fieldSchema, basePath);
+      return this.renderNestedObject(fieldName, fieldSchema, basePath, depth);
     }
 
     // Regular field
@@ -624,7 +637,7 @@ class FormBuilder extends LitElement {
   /**
    * Render a nested object with its own properties
    */
-  renderNestedObject(fieldName, fieldSchema, basePath = '') {
+  renderNestedObject(fieldName, fieldSchema, basePath = '', depth = 0) {
     const fieldPath = basePath ? `${basePath}.${fieldName}` : fieldName;
 
     return html`
@@ -636,7 +649,7 @@ class FormBuilder extends LitElement {
           ? html`<div class="nested-object-description">${fieldSchema.description}</div>`
           : ''}
         ${Object.entries(fieldSchema.properties).map(([nestedFieldName, nestedFieldSchema]) =>
-          this.renderField(nestedFieldName, nestedFieldSchema, fieldPath)
+          this.renderField(nestedFieldName, nestedFieldSchema, fieldPath, depth + 1)
         )}
       </div>
     `;
