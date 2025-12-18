@@ -355,7 +355,7 @@ class FormBuilder extends LitElement {
 
   /**
    * Deep clone an object, handling Dates and other types
-   * Uses structuredClone if available, otherwise falls back to JSON method
+   * Uses structuredClone if available, otherwise falls back to manual recursive
    */
   deepClone(obj) {
     if (obj === null || obj === undefined) return obj;
@@ -403,6 +403,11 @@ class FormBuilder extends LitElement {
 
     if (obj1 instanceof Date && obj2 instanceof Date) {
       return obj1.getTime() === obj2.getTime();
+    }
+
+    // If only one is a Date, they are not equal
+    if (obj1 instanceof Date || obj2 instanceof Date) {
+      return false;
     }
 
     if (Array.isArray(obj1) && Array.isArray(obj2)) {
@@ -514,7 +519,7 @@ class FormBuilder extends LitElement {
     this.validationFailed = false;
 
     // Check if form data has changed from initial state
-    this.hasChanges = !this.deepEqual(this.formData, this.initialData);
+    this.hasChanges = !this.deepEqual(this.formData, this.initialFormData);
   }
 
   /**
@@ -851,7 +856,7 @@ class FormBuilder extends LitElement {
         // Provide specific error for 403 after retry
         if (response.status === 403 && isRetry) {
           throw new Error(
-            'Authentication failed: Access denied even after token refresh. You may not have permission to submit this form.'
+            'Authorization failed: Access denied even after token refresh. You may not have permission to submit this form.'
           );
         }
         throw new Error(`Failed to submit form: ${response.statusText}`);
