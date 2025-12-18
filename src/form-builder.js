@@ -736,7 +736,7 @@ class FormBuilder extends LitElement {
               </label>
             `
           : ''}
-        ${fieldSchema.description && !isGroupedInput
+        ${fieldSchema.description
           ? html` <span class="description">${fieldSchema.description}</span> `
           : ''}
         ${this.renderInput(fieldPath, fieldSchema, value, uiOptions)}
@@ -776,9 +776,17 @@ class FormBuilder extends LitElement {
       const selectedValues = Array.isArray(value) ? value : [];
       const containerClass = isInline ? 'checkbox-group inline' : 'checkbox-group';
 
+      // Extract basePath and fieldName from fieldPath
+      const pathParts = fieldPath.split('.');
+      const fieldName = pathParts[pathParts.length - 1];
+      const basePath = pathParts.slice(0, -1).join('.');
+
+      const parentSchema = basePath ? this.getSchemaAtPath(basePath) : this.schema;
+      const isRequired = parentSchema?.required?.includes(fieldName) ?? false;
+
       return html`
         <fieldset class="${containerClass}">
-          <legend>${fieldSchema.title || fieldPath.split('.').pop()}</legend>
+          <legend class="${isRequired ? 'required' : ''}">${fieldSchema.title || fieldName}</legend>
           ${items.enum.map((opt) => {
             const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
             return html`
@@ -824,9 +832,17 @@ class FormBuilder extends LitElement {
     if (enumValues && widget === 'radio') {
       const containerClass = isInline ? 'radio-group inline' : 'radio-group';
 
+      // Extract basePath and fieldName from fieldPath
+      const pathParts = fieldPath.split('.');
+      const fieldName = pathParts[pathParts.length - 1];
+      const basePath = pathParts.slice(0, -1).join('.');
+
+      const parentSchema = basePath ? this.getSchemaAtPath(basePath) : this.schema;
+      const isRequired = parentSchema?.required?.includes(fieldName) ?? false;
+
       return html`
         <fieldset class="${containerClass}">
-          <legend>${fieldSchema.title || fieldPath.split('.').pop()}</legend>
+          <legend class="${isRequired ? 'required' : ''}">${fieldSchema.title || fieldName}</legend>
           ${enumValues.map((opt) => {
             const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
             return html`
