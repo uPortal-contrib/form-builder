@@ -68,7 +68,8 @@ class FormBuilder extends LitElement {
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 4px;
+      margin: 14px 0px;
     }
 
     .nested-object {
@@ -157,7 +158,7 @@ class FormBuilder extends LitElement {
     }
 
     legend {
-      font-weight: 500;
+      font-weight: 700;
       color: #333;
       padding: 0;
       margin-bottom: 8px;
