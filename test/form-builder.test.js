@@ -429,7 +429,7 @@ describe('FormBuilder', () => {
       resolveSubmit({ ok: true, json: async () => ({}) });
       await waitUntil(() => !element.submitting);
 
-      expect(submitButton.disabled).to.be.false;
+      expect(submitButton.disabled).to.be.true;
     });
 
     it('should prevent double submission', async () => {

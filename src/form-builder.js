@@ -31,6 +31,8 @@ class FormBuilder extends LitElement {
     decoded: { type: Object, state: true },
     submitSuccess: { type: Boolean, state: true },
     validationFailed: { type: Boolean, state: true },
+    initialFormData: { type: Object, state: true },
+    hasChanges: { type: Boolean, state: true },
   };
 
   static styles = css`
@@ -310,6 +312,8 @@ class FormBuilder extends LitElement {
     this.fieldErrors = {};
     this.submitSuccess = false;
     this.validationFailed = false;
+    this.initialFormData = {};
+    this.hasChanges = false;
   }
 
   async connectedCallback() {
@@ -406,15 +410,22 @@ class FormBuilder extends LitElement {
       if (response.ok) {
         const payload = await response.json();
         this.formData = payload?.answers ?? {};
+        this.initialFormData = JSON.parse(JSON.stringify(this.formData)); // Deep clone
+        this.hasChanges = false;
       } else {
-        // It's OK if there's no existing data
         this.formData = {};
+        this.initialFormData = {};
+        this.hasChanges = false;
       }
     } catch (err) {
       // Non-critical error
       console.warn('Could not fetch form data:', err);
       this.formData = {};
     }
+  }
+
+  checkForChanges() {
+    this.hasChanges = JSON.stringify(this.formData) !== JSON.stringify(this.initialFormData);
   }
 
   /**
@@ -522,6 +533,8 @@ class FormBuilder extends LitElement {
       this.fieldErrors = { ...this.fieldErrors };
       delete this.fieldErrors[fieldPath];
     }
+
+    this.checkForChanges();
   }
 
   handleArrayChange(fieldPath, index, event) {
@@ -529,6 +542,8 @@ class FormBuilder extends LitElement {
     const newArray = [...currentArray];
     newArray[index] = event.target.value;
     this.setNestedValue(fieldPath, newArray);
+
+    this.checkForChanges(); // Needed?
   }
 
   handleMultiSelectChange(fieldPath, event) {
@@ -542,6 +557,8 @@ class FormBuilder extends LitElement {
       this.fieldErrors = { ...this.fieldErrors };
       delete this.fieldErrors[fieldPath];
     }
+
+    this.checkForChanges();
   }
 
   handleCheckboxArrayChange(fieldPath, optionValue, event) {
@@ -564,6 +581,8 @@ class FormBuilder extends LitElement {
       this.fieldErrors = { ...this.fieldErrors };
       delete this.fieldErrors[fieldPath];
     }
+
+    this.checkForChanges();
   }
 
   /**
@@ -761,6 +780,8 @@ class FormBuilder extends LitElement {
 
       this.submitSuccess = true;
       this.error = null;
+      this.initialFormData = JSON.parse(JSON.stringify(this.formData)); // Update baseline
+      this.hasChanges = false;
 
       // Scroll to success message
       setTimeout(() => {
@@ -1114,7 +1135,7 @@ class FormBuilder extends LitElement {
           )}
 
           <div class="buttons">
-            <button type="submit" ?disabled="${this.submitting}">
+            <button type="submit" ?disabled="${this.submitting || !this.hasChanges}">
               <span class="button-content">
                 ${this.submitting ? html`<span class="spinner"></span>` : ''}
                 ${this.submitting ? 'Submitting...' : 'Submit'}
