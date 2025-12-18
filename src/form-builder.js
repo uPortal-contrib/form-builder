@@ -21,7 +21,7 @@ class FormBuilder extends LitElement {
 
     // Internal state
     schema: { type: Object, state: true },
-    formData: { type: Object, state: true },
+    _formData: { type: Object, state: true },
     uiSchema: { type: Object, state: true },
     fbmsFormVersion: { type: String, state: true },
     loading: { type: Boolean, state: true },
@@ -29,6 +29,10 @@ class FormBuilder extends LitElement {
     error: { type: String, state: true },
     token: { type: String, state: true },
     decoded: { type: Object, state: true },
+    submitSuccess: { type: Boolean, state: true },
+    validationFailed: { type: Boolean, state: true },
+    initialFormData: { type: Object, state: true },
+    hasChanges: { type: Boolean, state: true },
   };
 
   static styles = css`
@@ -258,7 +262,53 @@ class FormBuilder extends LitElement {
       align-items: center;
       justify-content: center;
     }
+
+    .status-message {
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .status-message.success {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+
+    .status-message.validation-error {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+    }
+
+    .status-message.error {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+
+    form.submitting input,
+    form.submitting textarea,
+    form.submitting select,
+    form.submitting button:not([type='submit']) {
+      opacity: 0.6;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
   `;
+
+  // Getter and setter for formData
+  get formData() {
+    return this._formData;
+  }
+
+  set formData(value) {
+    const oldValue = this._formData;
+    this._formData = value;
+    this.requestUpdate('formData', oldValue);
+    this.updateStateFlags();
+  }
 
   constructor() {
     super();
@@ -266,12 +316,16 @@ class FormBuilder extends LitElement {
     this.submitting = false;
     this.error = null;
     this.schema = null;
-    this.formData = {};
+    this._formData = {};
     this.uiSchema = null;
     this.fbmsFormVersion = null;
     this.token = null;
     this.decoded = { sub: 'unknown' };
     this.fieldErrors = {};
+    this.submitSuccess = false;
+    this.validationFailed = false;
+    this.initialFormData = {};
+    this.hasChanges = false;
   }
 
   async connectedCallback() {
@@ -297,6 +351,80 @@ class FormBuilder extends LitElement {
       this.error = err.message || 'Failed to initialize form';
       this.loading = false;
     }
+  }
+
+  /**
+   * Deep clone an object, handling Dates and other types
+   * Uses structuredClone if available, otherwise falls back to manual recursive
+   */
+  deepClone(obj) {
+    if (obj === null || obj === undefined) return obj;
+
+    // Use structuredClone if available (modern browsers)
+    if (typeof structuredClone === 'function') {
+      try {
+        return structuredClone(obj);
+      } catch (err) {
+        console.warn('structuredClone failed, falling back to manual clone:', err);
+      }
+    }
+
+    // Fallback: manual deep clone handling common types
+    if (obj instanceof Date) {
+      return new Date(obj.getTime());
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.deepClone(item));
+    }
+
+    if (typeof obj === 'object') {
+      const cloned = {};
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          cloned[key] = this.deepClone(obj[key]);
+        }
+      }
+      return cloned;
+    }
+
+    // Primitives
+    return obj;
+  }
+
+  /**
+   * Deep equality check, handling Dates and other types
+   */
+  deepEqual(obj1, obj2) {
+    if (obj1 === obj2) return true;
+
+    if (obj1 === null || obj2 === null) return false;
+    if (obj1 === undefined || obj2 === undefined) return false;
+
+    if (obj1 instanceof Date && obj2 instanceof Date) {
+      return obj1.getTime() === obj2.getTime();
+    }
+
+    // If only one is a Date, they are not equal
+    if (obj1 instanceof Date || obj2 instanceof Date) {
+      return false;
+    }
+
+    if (Array.isArray(obj1) && Array.isArray(obj2)) {
+      if (obj1.length !== obj2.length) return false;
+      return obj1.every((item, index) => this.deepEqual(item, obj2[index]));
+    }
+
+    if (typeof obj1 === 'object' && typeof obj2 === 'object') {
+      const keys1 = Object.keys(obj1);
+      const keys2 = Object.keys(obj2);
+
+      if (keys1.length !== keys2.length) return false;
+
+      return keys1.every((key) => this.deepEqual(obj1[key], obj2[key]));
+    }
+
+    return false;
   }
 
   async fetchToken() {
@@ -367,16 +495,31 @@ class FormBuilder extends LitElement {
 
       if (response.ok) {
         const payload = await response.json();
-        this.formData = payload?.answers ?? {};
+        this._formData = payload?.answers ?? {}; // Use private property
+        this.initialFormData = this.deepClone(this._formData); // Use deepClone
       } else {
-        // It's OK if there's no existing data
-        this.formData = {};
+        this._formData = {};
+        this.initialFormData = {};
       }
+      this.hasChanges = false;
+      this.requestUpdate();
     } catch (err) {
       // Non-critical error
       console.warn('Could not fetch form data:', err);
-      this.formData = {};
+      this._formData = {};
+      this.initialFormData = {};
+      this.hasChanges = false;
+      this.requestUpdate();
     }
+  }
+
+  updateStateFlags() {
+    // Clear status messages when user makes changes
+    this.submitSuccess = false;
+    this.validationFailed = false;
+
+    // Check if form data has changed from initial state
+    this.hasChanges = !this.deepEqual(this.formData, this.initialFormData);
   }
 
   /**
@@ -455,6 +598,7 @@ class FormBuilder extends LitElement {
     current[parts[parts.length - 1]] = value;
     this.formData = newData;
   }
+
   /**
    * Get the schema object at a given path
    * e.g., "contact_information" => schema.properties.contact_information
@@ -484,6 +628,8 @@ class FormBuilder extends LitElement {
       this.fieldErrors = { ...this.fieldErrors };
       delete this.fieldErrors[fieldPath];
     }
+
+    this.updateStateFlags();
   }
 
   handleArrayChange(fieldPath, index, event) {
@@ -491,6 +637,8 @@ class FormBuilder extends LitElement {
     const newArray = [...currentArray];
     newArray[index] = event.target.value;
     this.setNestedValue(fieldPath, newArray);
+
+    this.updateStateFlags();
   }
 
   handleMultiSelectChange(fieldPath, event) {
@@ -504,6 +652,8 @@ class FormBuilder extends LitElement {
       this.fieldErrors = { ...this.fieldErrors };
       delete this.fieldErrors[fieldPath];
     }
+
+    this.updateStateFlags();
   }
 
   handleCheckboxArrayChange(fieldPath, optionValue, event) {
@@ -526,6 +676,8 @@ class FormBuilder extends LitElement {
       this.fieldErrors = { ...this.fieldErrors };
       delete this.fieldErrors[fieldPath];
     }
+
+    this.updateStateFlags();
   }
 
   /**
@@ -622,8 +774,18 @@ class FormBuilder extends LitElement {
   async handleSubmit(event) {
     event.preventDefault();
 
+    // Clear previous status messages
+    this.submitSuccess = false;
+    this.validationFailed = false;
     if (!this.validateForm()) {
-      this.requestUpdate();
+      this.validationFailed = true;
+      await this.updateComplete; // Wait for render to complete
+
+      // Scroll to first error
+      const firstError = this.shadowRoot.querySelector('.error-message');
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
@@ -632,9 +794,17 @@ class FormBuilder extends LitElement {
       return;
     }
 
+    await this.submitWithRetry(false);
+  }
+
+  async submitWithRetry(isRetry = false) {
     try {
-      this.submitting = true;
+      // Only set submitting on the first call, not on retry
+      if (!isRetry) {
+        this.submitting = true;
+      }
       this.error = null;
+
       const body = {
         username: this.decoded.sub,
         formFname: this.fbmsFormFname,
@@ -659,7 +829,36 @@ class FormBuilder extends LitElement {
         body: JSON.stringify(body),
       });
 
+      // Handle 403 - token may be stale
+      if (response.status === 403 && !isRetry) {
+        console.warn('Received 403, attempting to refresh token and retry...');
+
+        // Re-fetch token if OIDC URL is configured
+        if (this.oidcUrl) {
+          try {
+            await this.fetchToken();
+            console.warn('Token refreshed successfully, retrying submission...');
+
+            // Retry once with new token (submitting flag stays true)
+            return await this.submitWithRetry(true);
+          } catch (tokenError) {
+            console.error('Failed to refresh token:', tokenError);
+            // Fall through to handle the original 403 error
+            throw new Error('Authentication failed: Unable to refresh token');
+          }
+        } else {
+          console.warn('OIDC URL is not configured; cannot refresh token. Skipping retry.');
+          // Fall through to handle the 403 error normally
+        }
+      }
+
       if (!response.ok) {
+        // Provide specific error for 403 after retry
+        if (response.status === 403 && isRetry) {
+          throw new Error(
+            'Authorization failed: Access denied even after token refresh. You may not have permission to submit this form.'
+          );
+        }
         throw new Error(`Failed to submit form: ${response.statusText}`);
       }
 
@@ -672,8 +871,18 @@ class FormBuilder extends LitElement {
         })
       );
 
-      // Optional: Reset or show success message
+      this.submitSuccess = true;
       this.error = null;
+      this.initialFormData = this.deepClone(this.formData); // Use deepClone
+      this.hasChanges = false;
+
+      await this.updateComplete; // Wait for render to complete
+
+      // Scroll to success message
+      const successMsg = this.shadowRoot.querySelector('.status-message.success');
+      if (successMsg) {
+        successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     } catch (err) {
       this.error = err.message || 'Failed to submit form';
 
@@ -1011,15 +1220,25 @@ class FormBuilder extends LitElement {
         : ''}
 
       <div class="container">
-        <form @submit="${this.handleSubmit}">
+        <form @submit="${this.handleSubmit}" class="${this.submitting ? 'submitting' : ''}">
           ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
           ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
+          ${this.submitSuccess
+            ? html` <div class="status-message success">✓ Form submitted successfully!</div> `
+            : ''}
+          ${this.validationFailed
+            ? html`
+                <div class="status-message validation-error">
+                  ⚠ Please correct the errors below before submitting.
+                </div>
+              `
+            : ''}
           ${Object.entries(this.schema.properties).map(([fieldName, fieldSchema]) =>
             this.renderField(fieldName, fieldSchema)
           )}
 
           <div class="buttons">
-            <button type="submit" ?disabled="${this.submitting}">
+            <button type="submit" ?disabled="${this.submitting || !this.hasChanges}">
               <span class="button-content">
                 ${this.submitting ? html`<span class="spinner"></span>` : ''}
                 ${this.submitting ? 'Submitting...' : 'Submit'}
