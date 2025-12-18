@@ -29,6 +29,8 @@ class FormBuilder extends LitElement {
     error: { type: String, state: true },
     token: { type: String, state: true },
     decoded: { type: Object, state: true },
+    submitSuccess: { type: Boolean, state: true },
+    validationFailed: { type: Boolean, state: true },
   };
 
   static styles = css`
@@ -258,6 +260,40 @@ class FormBuilder extends LitElement {
       align-items: center;
       justify-content: center;
     }
+
+    .status-message {
+      padding: 12px 16px;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      font-weight: 500;
+    }
+
+    .status-message.success {
+      background-color: #d4edda;
+      border: 1px solid #c3e6cb;
+      color: #155724;
+    }
+
+    .status-message.validation-error {
+      background-color: #fff3cd;
+      border: 1px solid #ffeaa7;
+      color: #856404;
+    }
+
+    .status-message.error {
+      background-color: #f8d7da;
+      border: 1px solid #f5c6cb;
+      color: #721c24;
+    }
+
+    form.submitting input,
+    form.submitting textarea,
+    form.submitting select,
+    form.submitting button:not([type='submit']) {
+      opacity: 0.6;
+      pointer-events: none;
+      cursor: not-allowed;
+    }
   `;
 
   constructor() {
@@ -272,6 +308,8 @@ class FormBuilder extends LitElement {
     this.token = null;
     this.decoded = { sub: 'unknown' };
     this.fieldErrors = {};
+    this.submitSuccess = false;
+    this.validationFailed = false;
   }
 
   async connectedCallback() {
@@ -622,8 +660,20 @@ class FormBuilder extends LitElement {
   async handleSubmit(event) {
     event.preventDefault();
 
+    // Clear previous status messages
+    this.submitSuccess = false;
+    this.validationFailed = false;
+
     if (!this.validateForm()) {
+      this.validationFailed = true;
       this.requestUpdate();
+      // Scroll to first error
+      setTimeout(() => {
+        const firstError = this.shadowRoot.querySelector('.error-message');
+        if (firstError) {
+          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
       return;
     }
 
@@ -637,7 +687,10 @@ class FormBuilder extends LitElement {
 
   async submitWithRetry(isRetry = false) {
     try {
-      this.submitting = true;
+      // Only set submitting on the first call, not on retry
+      if (!isRetry) {
+        this.submitting = true;
+      }
       this.error = null;
 
       const body = {
@@ -668,17 +721,32 @@ class FormBuilder extends LitElement {
       if (response.status === 403 && !isRetry) {
         console.warn('Received 403, attempting to refresh token and retry...');
 
-        // Re-fetch token
+        // Re-fetch token if OIDC URL is configured
         if (this.oidcUrl) {
-          await this.fetchToken();
-        }
+          try {
+            await this.fetchToken();
+            console.warn('Token refreshed successfully, retrying submission...');
 
-        // Retry once with new token
-        this.submitting = false;
-        return await this.submitWithRetry(true);
+            // Retry once with new token (submitting flag stays true)
+            return await this.submitWithRetry(true);
+          } catch (tokenError) {
+            console.error('Failed to refresh token:', tokenError);
+            // Fall through to handle the original 403 error
+            throw new Error('Authentication failed: Unable to refresh token');
+          }
+        } else {
+          console.warn('OIDC URL is not configured; cannot refresh token. Skipping retry.');
+          // Fall through to handle the 403 error normally
+        }
       }
 
       if (!response.ok) {
+        // Provide specific error for 403 after retry
+        if (response.status === 403 && isRetry) {
+          throw new Error(
+            'Authentication failed: Access denied even after token refresh. You may not have permission to submit this form.'
+          );
+        }
         throw new Error(`Failed to submit form: ${response.statusText}`);
       }
 
@@ -691,7 +759,16 @@ class FormBuilder extends LitElement {
         })
       );
 
+      this.submitSuccess = true;
       this.error = null;
+
+      // Scroll to success message
+      setTimeout(() => {
+        const successMsg = this.shadowRoot.querySelector('.status-message.success');
+        if (successMsg) {
+          successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
     } catch (err) {
       this.error = err.message || 'Failed to submit form';
 
@@ -1029,7 +1106,7 @@ class FormBuilder extends LitElement {
         : ''}
 
       <div class="container">
-        <form @submit="${this.handleSubmit}">
+        <form @submit="${this.handleSubmit}" class="${this.submitting ? 'submitting' : ''}">
           ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
           ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
           ${Object.entries(this.schema.properties).map(([fieldName, fieldSchema]) =>
