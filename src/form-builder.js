@@ -21,7 +21,7 @@ class FormBuilder extends LitElement {
 
     // Internal state
     schema: { type: Object, state: true },
-    formData: { type: Object, state: true },
+    _formData: { type: Object, state: true },
     uiSchema: { type: Object, state: true },
     fbmsFormVersion: { type: String, state: true },
     loading: { type: Boolean, state: true },
@@ -298,13 +298,25 @@ class FormBuilder extends LitElement {
     }
   `;
 
+  // Getter and setter for formData
+  get formData() {
+    return this._formData;
+  }
+
+  set formData(value) {
+    const oldValue = this._formData;
+    this._formData = value;
+    this.requestUpdate('formData', oldValue);
+    this.updateStateFlags();
+  }
+
   constructor() {
     super();
     this.loading = true;
     this.submitting = false;
     this.error = null;
     this.schema = null;
-    this.formData = {};
+    this._formData = {};
     this.uiSchema = null;
     this.fbmsFormVersion = null;
     this.token = null;
@@ -339,6 +351,75 @@ class FormBuilder extends LitElement {
       this.error = err.message || 'Failed to initialize form';
       this.loading = false;
     }
+  }
+
+  /**
+   * Deep clone an object, handling Dates and other types
+   * Uses structuredClone if available, otherwise falls back to JSON method
+   */
+  deepClone(obj) {
+    if (obj === null || obj === undefined) return obj;
+
+    // Use structuredClone if available (modern browsers)
+    if (typeof structuredClone === 'function') {
+      try {
+        return structuredClone(obj);
+      } catch (err) {
+        console.warn('structuredClone failed, falling back to manual clone:', err);
+      }
+    }
+
+    // Fallback: manual deep clone handling common types
+    if (obj instanceof Date) {
+      return new Date(obj.getTime());
+    }
+
+    if (Array.isArray(obj)) {
+      return obj.map((item) => this.deepClone(item));
+    }
+
+    if (typeof obj === 'object') {
+      const cloned = {};
+      for (const key in obj) {
+        if (Object.prototype.hasOwnProperty.call(obj, key)) {
+          cloned[key] = this.deepClone(obj[key]);
+        }
+      }
+      return cloned;
+    }
+
+    // Primitives
+    return obj;
+  }
+
+  /**
+   * Deep equality check, handling Dates and other types
+   */
+  deepEqual(obj1, obj2) {
+    if (obj1 === obj2) return true;
+
+    if (obj1 === null || obj2 === null) return false;
+    if (obj1 === undefined || obj2 === undefined) return false;
+
+    if (obj1 instanceof Date && obj2 instanceof Date) {
+      return obj1.getTime() === obj2.getTime();
+    }
+
+    if (Array.isArray(obj1) && Array.isArray(obj2)) {
+      if (obj1.length !== obj2.length) return false;
+      return obj1.every((item, index) => this.deepEqual(item, obj2[index]));
+    }
+
+    if (typeof obj1 === 'object' && typeof obj2 === 'object') {
+      const keys1 = Object.keys(obj1);
+      const keys2 = Object.keys(obj2);
+
+      if (keys1.length !== keys2.length) return false;
+
+      return keys1.every((key) => this.deepEqual(obj1[key], obj2[key]));
+    }
+
+    return false;
   }
 
   async fetchToken() {
@@ -409,18 +490,21 @@ class FormBuilder extends LitElement {
 
       if (response.ok) {
         const payload = await response.json();
-        this.formData = payload?.answers ?? {};
-        this.initialFormData = JSON.parse(JSON.stringify(this.formData)); // Deep clone
-        this.hasChanges = false;
+        this._formData = payload?.answers ?? {}; // Use private property
+        this.initialFormData = this.deepClone(this._formData); // Use deepClone
       } else {
-        this.formData = {};
+        this._formData = {};
         this.initialFormData = {};
-        this.hasChanges = false;
       }
+      this.hasChanges = false;
+      this.requestUpdate();
     } catch (err) {
       // Non-critical error
       console.warn('Could not fetch form data:', err);
-      this.formData = {};
+      this._formData = {};
+      this.initialFormData = {};
+      this.hasChanges = false;
+      this.requestUpdate();
     }
   }
 
@@ -430,7 +514,7 @@ class FormBuilder extends LitElement {
     this.validationFailed = false;
 
     // Check if form data has changed from initial state
-    this.hasChanges = JSON.stringify(this.formData) !== JSON.stringify(this.initialFormData);
+    this.hasChanges = !this.deepEqual(this.formData, this.initialData);
   }
 
   /**
@@ -688,17 +772,15 @@ class FormBuilder extends LitElement {
     // Clear previous status messages
     this.submitSuccess = false;
     this.validationFailed = false;
-
     if (!this.validateForm()) {
       this.validationFailed = true;
-      this.requestUpdate();
+      await this.updateComplete; // Wait for render to complete
+
       // Scroll to first error
-      setTimeout(() => {
-        const firstError = this.shadowRoot.querySelector('.error-message');
-        if (firstError) {
-          firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
+      const firstError = this.shadowRoot.querySelector('.error-message');
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
       return;
     }
 
@@ -786,16 +868,16 @@ class FormBuilder extends LitElement {
 
       this.submitSuccess = true;
       this.error = null;
-      this.initialFormData = JSON.parse(JSON.stringify(this.formData)); // Update baseline
+      this.initialFormData = this.deepClone(this.formData); // Use deepClone
       this.hasChanges = false;
 
+      await this.updateComplete; // Wait for render to complete
+
       // Scroll to success message
-      setTimeout(() => {
-        const successMsg = this.shadowRoot.querySelector('.status-message.success');
-        if (successMsg) {
-          successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
+      const successMsg = this.shadowRoot.querySelector('.status-message.success');
+      if (successMsg) {
+        successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     } catch (err) {
       this.error = err.message || 'Failed to submit form';
 
