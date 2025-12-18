@@ -1130,6 +1130,16 @@ class FormBuilder extends LitElement {
         <form @submit="${this.handleSubmit}" class="${this.submitting ? 'submitting' : ''}">
           ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
           ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
+          ${this.submitSuccess
+            ? html` <div class="status-message success">✓ Form submitted successfully!</div> `
+            : ''}
+          ${this.validationFailed
+            ? html`
+                <div class="status-message validation-error">
+                  ⚠ Please correct the errors below before submitting.
+                </div>
+              `
+            : ''}
           ${Object.entries(this.schema.properties).map(([fieldName, fieldSchema]) =>
             this.renderField(fieldName, fieldSchema)
           )}
