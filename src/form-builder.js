@@ -33,6 +33,7 @@ class FormBuilder extends LitElement {
     validationFailed: { type: Boolean, state: true },
     initialFormData: { type: Object, state: true },
     hasChanges: { type: Boolean, state: true },
+    submissionStatus: { type: Object, state: true },
   };
 
   static styles = css`
@@ -288,6 +289,15 @@ class FormBuilder extends LitElement {
       color: #721c24;
     }
 
+    .status-message ul {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+    }
+
+    .status-message li {
+      margin: 4px 0;
+    }
+
     form.submitting input,
     form.submitting textarea,
     form.submitting select,
@@ -310,6 +320,25 @@ class FormBuilder extends LitElement {
     this.updateStateFlags();
   }
 
+  /**
+   * Get custom error message from schema if available
+   * Follows the pattern: schema.properties.fieldName.messages.ruleName
+   * For nested fields: schema.properties.parent.properties.child.messages.ruleName
+   */
+  getCustomErrorMessage(fieldPath, ruleName) {
+    const pathParts = fieldPath.split('.');
+    let current = this.schema;
+
+    // Navigate to the field schema
+    for (const part of pathParts) {
+      current = current?.properties?.[part];
+      if (!current) return null;
+    }
+
+    // Check for custom message
+    return current?.messages?.[ruleName];
+  }
+
   constructor() {
     super();
     this.loading = true;
@@ -326,6 +355,7 @@ class FormBuilder extends LitElement {
     this.validationFailed = false;
     this.initialFormData = {};
     this.hasChanges = false;
+    this.submissionStatus = null;
   }
 
   async connectedCallback() {
@@ -697,7 +727,8 @@ class FormBuilder extends LitElement {
       const fieldPath = basePath ? `${basePath}.${fieldName}` : fieldName;
       const value = this.getNestedValue(fieldPath);
       if (value === undefined || value === null || value === '') {
-        errors[fieldPath] = 'This field is required';
+        const customMsg = this.getCustomErrorMessage(fieldPath, 'required');
+        errors[fieldPath] = customMsg || 'This field is required';
       }
     });
 
@@ -723,7 +754,10 @@ class FormBuilder extends LitElement {
         if (fieldSchema.format === 'email') {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
-            errors[fieldPath] = 'Invalid email address';
+            const customMsg =
+              this.getCustomErrorMessage(fieldPath, 'format') ||
+              this.getCustomErrorMessage(fieldPath, 'email');
+            errors[fieldPath] = customMsg || 'Invalid email address';
           }
         }
 
@@ -731,7 +765,8 @@ class FormBuilder extends LitElement {
         if (fieldSchema.pattern) {
           const regex = new RegExp(fieldSchema.pattern);
           if (!regex.test(value)) {
-            errors[fieldPath] = fieldSchema.patternErrorMessage || 'Invalid format';
+            const customMsg = this.getCustomErrorMessage(fieldPath, 'pattern');
+            errors[fieldPath] = customMsg || 'Invalid format';
           }
         }
 
@@ -739,13 +774,16 @@ class FormBuilder extends LitElement {
         if (fieldSchema.type === 'number' || fieldSchema.type === 'integer') {
           const num = Number(value);
           if (isNaN(num)) {
-            errors[fieldPath] = 'Must be a number';
+            const customMsg = this.getCustomErrorMessage(fieldPath, 'type');
+            errors[fieldPath] = customMsg || 'Must be a number';
           } else {
             if (fieldSchema.minimum !== undefined && num < fieldSchema.minimum) {
-              errors[fieldPath] = `Must be at least ${fieldSchema.minimum}`;
+              const customMsg = this.getCustomErrorMessage(fieldPath, 'minimum');
+              errors[fieldPath] = customMsg || `Must be at least ${fieldSchema.minimum}`;
             }
             if (fieldSchema.maximum !== undefined && num > fieldSchema.maximum) {
-              errors[fieldPath] = `Must be at most ${fieldSchema.maximum}`;
+              const customMsg = this.getCustomErrorMessage(fieldPath, 'maximum');
+              errors[fieldPath] = customMsg || `Must be at most ${fieldSchema.maximum}`;
             }
           }
         }
@@ -753,10 +791,12 @@ class FormBuilder extends LitElement {
         // String length validation
         if (fieldSchema.type === 'string') {
           if (fieldSchema.minLength && value.length < fieldSchema.minLength) {
-            errors[fieldPath] = `Must be at least ${fieldSchema.minLength} characters`;
+            const customMsg = this.getCustomErrorMessage(fieldPath, 'minLength');
+            errors[fieldPath] = customMsg || `Must be at least ${fieldSchema.minLength} characters`;
           }
           if (fieldSchema.maxLength && value.length > fieldSchema.maxLength) {
-            errors[fieldPath] = `Must be at most ${fieldSchema.maxLength} characters`;
+            const customMsg = this.getCustomErrorMessage(fieldPath, 'maxLength');
+            errors[fieldPath] = customMsg || `Must be at most ${fieldSchema.maxLength} characters`;
           }
         }
       }
@@ -804,6 +844,7 @@ class FormBuilder extends LitElement {
         this.submitting = true;
       }
       this.error = null;
+      this.submissionStatus = null; // Clear previous messages
 
       const body = {
         username: this.decoded.sub,
@@ -828,6 +869,16 @@ class FormBuilder extends LitElement {
         headers,
         body: JSON.stringify(body),
       });
+
+      // Try to parse response body for messages (even on error)
+      let responseData = null;
+      try {
+        responseData = await response.json();
+        this.submissionStatus = responseData;
+      } catch (jsonErr) {
+        // Response might not be JSON
+        console.warn('Could not parse response as JSON:', jsonErr);
+      }
 
       // Handle 403 - token may be stale
       if (response.status === 403 && !isRetry) {
@@ -859,7 +910,13 @@ class FormBuilder extends LitElement {
             'Authorization failed: Access denied even after token refresh. You may not have permission to submit this form.'
           );
         }
-        throw new Error(`Failed to submit form: ${response.statusText}`);
+
+        // Use server error message if available
+        const errorMessage =
+          responseData?.messageHeader ||
+          responseData?.message ||
+          `Failed to submit form: ${response.statusText}`;
+        throw new Error(errorMessage);
       }
 
       // Dispatch success event
@@ -1224,7 +1281,32 @@ class FormBuilder extends LitElement {
           ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
           ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
           ${this.submitSuccess
-            ? html` <div class="status-message success">✓ Form submitted successfully!</div> `
+            ? html`
+                <div class="status-message success">
+                  ✓ Form submitted successfully!
+                  ${this.submissionStatus?.messages?.length > 0
+                    ? html`
+                        <ul>
+                          ${this.submissionStatus.messages.map((msg) => html`<li>${msg}</li>`)}
+                        </ul>
+                      `
+                    : ''}
+                </div>
+              `
+            : ''}
+          ${this.error
+            ? html`
+                <div class="status-message error">
+                  <strong>Error:</strong> ${this.error}
+                  ${this.submissionStatus?.messages?.length > 0
+                    ? html`
+                        <ul>
+                          ${this.submissionStatus.messages.map((msg) => html`<li>${msg}</li>`)}
+                        </ul>
+                      `
+                    : ''}
+                </div>
+              `
             : ''}
           ${this.validationFailed
             ? html`

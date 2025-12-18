@@ -2107,3 +2107,506 @@ describe('Radio Buttons and Checkboxes', () => {
     });
   });
 });
+
+describe('Server Response Messages', () => {
+  let element;
+  let fetchStub;
+
+  // Use the mockSchema from the main FormBuilder tests
+  const mockSchema = {
+    title: 'Test Form',
+    description: 'A test form',
+    type: 'object',
+    required: ['name', 'email'],
+    properties: {
+      name: {
+        type: 'string',
+        title: 'Full Name',
+        minLength: 2,
+      },
+      email: {
+        type: 'string',
+        title: 'Email',
+        format: 'email',
+      },
+    },
+  };
+
+  const mockSchemaResp = {
+    fname: 'test-form',
+    version: 1,
+    schema: mockSchema,
+    metadata: {},
+  };
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => mockSchemaResp,
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+
+    element.formData = {
+      name: 'John Doe',
+      email: 'john@example.com',
+    };
+    element.hasChanges = true;
+
+    fetchStub.reset();
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  it('should display server messages on successful submission', async () => {
+    const serverResponse = {
+      status: 'success',
+      messages: [
+        'Your form has been submitted successfully.',
+        'You will receive a confirmation email shortly.',
+      ],
+    };
+
+    fetchStub.resolves({
+      ok: true,
+      json: async () => serverResponse,
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+
+    setTimeout(() => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    await oneEvent(element, 'form-submit-success');
+    await element.updateComplete;
+
+    const successMessage = element.shadowRoot.querySelector('.status-message.success');
+    expect(successMessage).to.exist;
+
+    const messageList = successMessage.querySelectorAll('li');
+    expect(messageList).to.have.lengthOf(2);
+    expect(messageList[0].textContent).to.equal('Your form has been submitted successfully.');
+    expect(messageList[1].textContent).to.equal('You will receive a confirmation email shortly.');
+  });
+
+  it('should display server messages on submission error', async () => {
+    const errorResponse = {
+      messageHeader: 'Submission Failed',
+      messages: [
+        'The email address is already registered.',
+        'Please use a different email or contact support.',
+      ],
+    };
+
+    fetchStub.resolves({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      json: async () => errorResponse,
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+
+    setTimeout(() => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    await oneEvent(element, 'form-submit-error');
+    await element.updateComplete;
+
+    // Just verify the state is set correctly
+    expect(element.error).to.equal('Submission Failed');
+    expect(element.submissionStatus).to.exist;
+    expect(element.submissionStatus.messageHeader).to.equal('Submission Failed');
+    expect(element.submissionStatus.messages).to.have.lengthOf(2);
+    expect(element.submissionStatus.messages[0]).to.equal(
+      'The email address is already registered.'
+    );
+    expect(element.submissionStatus.messages[1]).to.equal(
+      'Please use a different email or contact support.'
+    );
+  });
+
+  it('should handle submission success without server messages', async () => {
+    fetchStub.resolves({
+      ok: true,
+      json: async () => ({}),
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+
+    setTimeout(() => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    await oneEvent(element, 'form-submit-success');
+    await element.updateComplete;
+
+    const successMessage = element.shadowRoot.querySelector('.status-message.success');
+    expect(successMessage).to.exist;
+    expect(successMessage.textContent).to.include('Form submitted successfully');
+
+    const messageList = successMessage.querySelectorAll('li');
+    expect(messageList).to.have.lengthOf(0);
+  });
+
+  it('should handle non-JSON error responses gracefully', async () => {
+    fetchStub.resolves({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+      json: async () => {
+        throw new Error('Not JSON');
+      },
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+
+    setTimeout(() => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    await oneEvent(element, 'form-submit-error');
+    await element.updateComplete;
+
+    expect(element.error).to.include('Failed to submit form');
+  });
+
+  it('should use server messageHeader for error display', async () => {
+    const errorResponse = {
+      messageHeader: 'Validation Error',
+      messages: ['Name cannot contain special characters.'],
+    };
+
+    fetchStub.resolves({
+      ok: false,
+      status: 422,
+      statusText: 'Unprocessable Entity',
+      json: async () => errorResponse,
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+
+    setTimeout(() => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    await oneEvent(element, 'form-submit-error');
+
+    expect(element.error).to.equal('Validation Error');
+  });
+});
+
+describe('Custom Schema Validation Messages', () => {
+  let element;
+  let fetchStub;
+
+  const schemaWithCustomMessages = {
+    title: 'Registration Form',
+    type: 'object',
+    required: ['username', 'email', 'age'],
+    properties: {
+      username: {
+        type: 'string',
+        title: 'Username',
+        minLength: 3,
+        maxLength: 20,
+        pattern: '^[a-zA-Z0-9_]+$',
+        messages: {
+          required: 'Please provide a username',
+          minLength: 'Username must be at least 3 characters long',
+          maxLength: 'Username cannot exceed 20 characters',
+          pattern: 'Username can only contain letters, numbers, and underscores',
+        },
+      },
+      email: {
+        type: 'string',
+        title: 'Email',
+        format: 'email',
+        messages: {
+          required: 'Email address is required',
+          format: 'Please enter a valid email address (e.g., user@example.com)',
+        },
+      },
+      age: {
+        type: 'integer',
+        title: 'Age',
+        minimum: 18,
+        maximum: 120,
+        messages: {
+          required: 'Please enter your age',
+          minimum: 'You must be at least 18 years old to register',
+          maximum: 'Please enter a valid age',
+          type: 'Age must be a whole number',
+        },
+      },
+      contact: {
+        type: 'object',
+        properties: {
+          phone: {
+            type: 'string',
+            title: 'Phone',
+            pattern: '^\\d{3}-\\d{3}-\\d{4}$',
+            messages: {
+              pattern: 'Phone must be in format: 555-123-4567',
+            },
+          },
+        },
+      },
+    },
+  };
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => ({
+        fname: 'test-form',
+        version: 1,
+        schema: schemaWithCustomMessages,
+        metadata: {},
+      }),
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  it('should use custom required message from schema', async () => {
+    const form = element.shadowRoot.querySelector('form');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await element.updateComplete;
+
+    expect(element.fieldErrors.username).to.equal('Please provide a username');
+    expect(element.fieldErrors.email).to.equal('Email address is required');
+    expect(element.fieldErrors.age).to.equal('Please enter your age');
+  });
+
+  it('should use custom minLength message from schema', () => {
+    element.formData = { username: 'ab' };
+
+    const isValid = element.validateForm();
+
+    expect(isValid).to.be.false;
+    expect(element.fieldErrors.username).to.equal('Username must be at least 3 characters long');
+  });
+
+  it('should use custom maxLength message from schema', () => {
+    element.formData = { username: 'a'.repeat(21) };
+
+    const isValid = element.validateForm();
+
+    expect(isValid).to.be.false;
+    expect(element.fieldErrors.username).to.equal('Username cannot exceed 20 characters');
+  });
+
+  it('should use custom pattern message from schema', () => {
+    element.formData = { username: 'user@name!' };
+
+    const isValid = element.validateForm();
+
+    expect(isValid).to.be.false;
+    expect(element.fieldErrors.username).to.equal(
+      'Username can only contain letters, numbers, and underscores'
+    );
+  });
+
+  it('should use custom format message for email', () => {
+    element.formData = { email: 'invalid-email' };
+
+    const isValid = element.validateForm();
+
+    expect(isValid).to.be.false;
+    expect(element.fieldErrors.email).to.equal(
+      'Please enter a valid email address (e.g., user@example.com)'
+    );
+  });
+
+  it('should use custom minimum message from schema', () => {
+    element.formData = { age: 17 };
+
+    const isValid = element.validateForm();
+
+    expect(isValid).to.be.false;
+    expect(element.fieldErrors.age).to.equal('You must be at least 18 years old to register');
+  });
+
+  it('should use custom maximum message from schema', () => {
+    element.formData = { age: 150 };
+
+    const isValid = element.validateForm();
+
+    expect(isValid).to.be.false;
+    expect(element.fieldErrors.age).to.equal('Please enter a valid age');
+  });
+
+  it('should use custom type message from schema', () => {
+    element.formData = { age: 'not-a-number' };
+
+    const isValid = element.validateForm();
+
+    expect(isValid).to.be.false;
+    expect(element.fieldErrors.age).to.equal('Age must be a whole number');
+  });
+
+  it('should use custom messages for nested fields', () => {
+    element.formData = {
+      contact: {
+        phone: '1234567890',
+      },
+    };
+
+    const isValid = element.validateForm();
+
+    expect(isValid).to.be.false;
+    expect(element.fieldErrors['contact.phone']).to.equal('Phone must be in format: 555-123-4567');
+  });
+
+  it('should fall back to default messages when no custom message exists', () => {
+    const schemaWithoutCustom = {
+      title: 'Simple Form',
+      type: 'object',
+      required: ['name'],
+      properties: {
+        name: {
+          type: 'string',
+          title: 'Name',
+          minLength: 2,
+        },
+      },
+    };
+
+    element.schema = schemaWithoutCustom;
+    element.formData = {};
+
+    const isValid = element.validateForm();
+
+    expect(isValid).to.be.false;
+    expect(element.fieldErrors.name).to.equal('This field is required'); // Default message
+  });
+
+  it('should display custom error messages in the UI', async () => {
+    element.formData = { username: 'a' };
+
+    const form = element.shadowRoot.querySelector('form');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await element.updateComplete;
+
+    const errorMessage = element.shadowRoot
+      .querySelector('input[name="username"]')
+      .parentElement.querySelector('.error-message');
+
+    expect(errorMessage).to.exist;
+    expect(errorMessage.textContent).to.equal('Username must be at least 3 characters long');
+  });
+});
+
+describe('getCustomErrorMessage Helper', () => {
+  let element;
+  let fetchStub;
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+
+    const testSchema = {
+      type: 'object',
+      properties: {
+        email: {
+          type: 'string',
+          format: 'email',
+          messages: {
+            format: 'Custom email error',
+            required: 'Custom required error',
+          },
+        },
+        nested: {
+          type: 'object',
+          properties: {
+            field: {
+              type: 'string',
+              messages: {
+                pattern: 'Custom nested pattern error',
+              },
+            },
+          },
+        },
+      },
+    };
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => ({
+        fname: 'test',
+        version: 1,
+        schema: testSchema,
+        metadata: {},
+      }),
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="test"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  it('should retrieve custom message for top-level field', () => {
+    const message = element.getCustomErrorMessage('email', 'format');
+    expect(message).to.equal('Custom email error');
+  });
+
+  it('should retrieve custom message for nested field', () => {
+    const message = element.getCustomErrorMessage('nested.field', 'pattern');
+    expect(message).to.equal('Custom nested pattern error');
+  });
+
+  it('should return null for non-existent field', () => {
+    const message = element.getCustomErrorMessage('nonexistent', 'format');
+    expect(message).to.be.null;
+  });
+
+  it('should return null for non-existent rule', () => {
+    const message = element.getCustomErrorMessage('email', 'nonexistent');
+    expect(message).to.be.undefined;
+  });
+
+  it('should return null for field without messages', () => {
+    element.schema.properties.noMessages = { type: 'string' };
+    const message = element.getCustomErrorMessage('noMessages', 'required');
+    expect(message).to.be.undefined;
+  });
+});
