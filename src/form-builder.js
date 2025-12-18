@@ -632,9 +632,14 @@ class FormBuilder extends LitElement {
       return;
     }
 
+    await this.submitWithRetry(false);
+  }
+
+  async submitWithRetry(isRetry = false) {
     try {
       this.submitting = true;
       this.error = null;
+
       const body = {
         username: this.decoded.sub,
         formFname: this.fbmsFormFname,
@@ -659,6 +664,20 @@ class FormBuilder extends LitElement {
         body: JSON.stringify(body),
       });
 
+      // Handle 403 - token may be stale
+      if (response.status === 403 && !isRetry) {
+        console.warn('Received 403, attempting to refresh token and retry...');
+
+        // Re-fetch token
+        if (this.oidcUrl) {
+          await this.fetchToken();
+        }
+
+        // Retry once with new token
+        this.submitting = false;
+        return await this.submitWithRetry(true);
+      }
+
       if (!response.ok) {
         throw new Error(`Failed to submit form: ${response.statusText}`);
       }
@@ -672,7 +691,6 @@ class FormBuilder extends LitElement {
         })
       );
 
-      // Optional: Reset or show success message
       this.error = null;
     } catch (err) {
       this.error = err.message || 'Failed to submit form';
