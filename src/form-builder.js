@@ -737,7 +737,7 @@ class FormBuilder extends LitElement {
               </label>
             `
           : ''}
-        ${fieldSchema.description
+        ${fieldSchema.description && !isGroupedInput
           ? html` <span class="description">${fieldSchema.description}</span> `
           : ''}
         ${this.renderInput(fieldPath, fieldSchema, value, uiOptions)}
@@ -788,6 +788,9 @@ class FormBuilder extends LitElement {
       return html`
         <fieldset class="${containerClass}">
           <legend class="${isRequired ? 'required' : ''}">${fieldSchema.title || fieldName}</legend>
+          ${fieldSchema.description
+            ? html`<span class="description">${fieldSchema.description}</span>`
+            : ''}
           ${items.enum.map((opt) => {
             const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
             return html`
@@ -844,6 +847,9 @@ class FormBuilder extends LitElement {
       return html`
         <fieldset class="${containerClass}">
           <legend class="${isRequired ? 'required' : ''}">${fieldSchema.title || fieldName}</legend>
+          ${fieldSchema.description
+            ? html`<span class="description">${fieldSchema.description}</span>`
+            : ''}
           ${enumValues.map((opt) => {
             const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
             return html`
