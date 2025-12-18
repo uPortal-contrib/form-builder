@@ -424,7 +424,12 @@ class FormBuilder extends LitElement {
     }
   }
 
-  checkForChanges() {
+  updateStateFlags() {
+    // Clear status messages when user makes changes
+    this.submitSuccess = false;
+    this.validationFailed = false;
+
+    // Check if form data has changed from initial state
     this.hasChanges = JSON.stringify(this.formData) !== JSON.stringify(this.initialFormData);
   }
 
@@ -504,6 +509,7 @@ class FormBuilder extends LitElement {
     current[parts[parts.length - 1]] = value;
     this.formData = newData;
   }
+
   /**
    * Get the schema object at a given path
    * e.g., "contact_information" => schema.properties.contact_information
@@ -534,7 +540,7 @@ class FormBuilder extends LitElement {
       delete this.fieldErrors[fieldPath];
     }
 
-    this.checkForChanges();
+    this.updateStateFlags();
   }
 
   handleArrayChange(fieldPath, index, event) {
@@ -543,7 +549,7 @@ class FormBuilder extends LitElement {
     newArray[index] = event.target.value;
     this.setNestedValue(fieldPath, newArray);
 
-    this.checkForChanges(); // Needed?
+    this.updateStateFlags();
   }
 
   handleMultiSelectChange(fieldPath, event) {
@@ -558,7 +564,7 @@ class FormBuilder extends LitElement {
       delete this.fieldErrors[fieldPath];
     }
 
-    this.checkForChanges();
+    this.updateStateFlags();
   }
 
   handleCheckboxArrayChange(fieldPath, optionValue, event) {
@@ -582,7 +588,7 @@ class FormBuilder extends LitElement {
       delete this.fieldErrors[fieldPath];
     }
 
-    this.checkForChanges();
+    this.updateStateFlags();
   }
 
   /**
