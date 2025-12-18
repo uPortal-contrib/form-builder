@@ -68,7 +68,8 @@ class FormBuilder extends LitElement {
     .form-group {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 4px;
+      margin: 14px 0px;
     }
 
     .nested-object {
@@ -147,6 +148,21 @@ class FormBuilder extends LitElement {
     input[type='checkbox'],
     input[type='radio'] {
       margin-right: 8px;
+    }
+
+    fieldset {
+      border: none;
+      padding: 0;
+      margin: 0;
+      min-width: 0; /* Fix for some browsers */
+    }
+
+    legend {
+      font-weight: 700;
+      color: #333;
+      padding: 0;
+      margin-bottom: 8px;
+      font-size: 1rem;
     }
 
     .checkbox-group,
@@ -709,13 +725,19 @@ class FormBuilder extends LitElement {
     }
     uiOptions = uiOptions || {};
 
+    const widget = uiOptions['ui:widget'];
+    const isGroupedInput = widget === 'radio' || widget === 'checkboxes';
+
     return html`
       <div class="form-group">
-        <label class="${required ? 'required' : ''}" for="${fieldPath}">
-          ${fieldSchema.title || fieldName}
-        </label>
-
-        ${fieldSchema.description
+        ${!isGroupedInput
+          ? html`
+              <label class="${required ? 'required' : ''}" for="${fieldPath}">
+                ${fieldSchema.title || fieldName}
+              </label>
+            `
+          : ''}
+        ${fieldSchema.description && !isGroupedInput
           ? html` <span class="description">${fieldSchema.description}</span> `
           : ''}
         ${this.renderInput(fieldPath, fieldSchema, value, uiOptions)}
@@ -755,8 +777,20 @@ class FormBuilder extends LitElement {
       const selectedValues = Array.isArray(value) ? value : [];
       const containerClass = isInline ? 'checkbox-group inline' : 'checkbox-group';
 
+      // Extract basePath and fieldName from fieldPath
+      const pathParts = fieldPath.split('.');
+      const fieldName = pathParts[pathParts.length - 1];
+      const basePath = pathParts.slice(0, -1).join('.');
+
+      const parentSchema = basePath ? this.getSchemaAtPath(basePath) : this.schema;
+      const isRequired = parentSchema?.required?.includes(fieldName) ?? false;
+
       return html`
-        <div class="${containerClass}">
+        <fieldset class="${containerClass}">
+          <legend class="${isRequired ? 'required' : ''}">${fieldSchema.title || fieldName}</legend>
+          ${fieldSchema.description
+            ? html`<span class="description">${fieldSchema.description}</span>`
+            : ''}
           ${items.enum.map((opt) => {
             const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
             return html`
@@ -773,7 +807,7 @@ class FormBuilder extends LitElement {
               </div>
             `;
           })}
-        </div>
+        </fieldset>
       `;
     }
 
@@ -802,8 +836,20 @@ class FormBuilder extends LitElement {
     if (enumValues && widget === 'radio') {
       const containerClass = isInline ? 'radio-group inline' : 'radio-group';
 
+      // Extract basePath and fieldName from fieldPath
+      const pathParts = fieldPath.split('.');
+      const fieldName = pathParts[pathParts.length - 1];
+      const basePath = pathParts.slice(0, -1).join('.');
+
+      const parentSchema = basePath ? this.getSchemaAtPath(basePath) : this.schema;
+      const isRequired = parentSchema?.required?.includes(fieldName) ?? false;
+
       return html`
-        <div class="${containerClass}">
+        <fieldset class="${containerClass}">
+          <legend class="${isRequired ? 'required' : ''}">${fieldSchema.title || fieldName}</legend>
+          ${fieldSchema.description
+            ? html`<span class="description">${fieldSchema.description}</span>`
+            : ''}
           ${enumValues.map((opt) => {
             const sanitizedId = this.sanitizeId(`${fieldPath}-${opt}`);
             return html`
@@ -820,7 +866,7 @@ class FormBuilder extends LitElement {
               </div>
             `;
           })}
-        </div>
+        </fieldset>
       `;
     }
 
