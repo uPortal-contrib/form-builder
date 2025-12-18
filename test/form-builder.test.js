@@ -406,6 +406,16 @@ describe('FormBuilder', () => {
         email: 'john@example.com',
       };
 
+      // Simulate actual user input to trigger hasChanges
+      await elementUpdated(element);
+      const nameInput = element.shadowRoot.querySelector('#name');
+      nameInput.value = 'John Doe';
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      await element.updateComplete;
+
+      // Verify hasChanges is true
+      expect(element.hasChanges).to.be.true;
+
       let resolveSubmit;
       fetchStub.returns(
         new Promise((resolve) => {
@@ -429,7 +439,7 @@ describe('FormBuilder', () => {
       resolveSubmit({ ok: true, json: async () => ({}) });
       await waitUntil(() => !element.submitting);
 
-      expect(submitButton.disabled).to.be.true;
+      expect(submitButton.disabled).to.be.true; // Still disabled because no new changes
     });
 
     it('should prevent double submission', async () => {
