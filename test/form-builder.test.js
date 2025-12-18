@@ -597,6 +597,260 @@ describe('FormBuilder', () => {
       expect(fetchStub.firstCall.args[0]).to.equal('/auth/userinfo');
     });
   });
+
+  describe('403 Error Handling and Token Refresh', () => {
+    beforeEach(async () => {
+      // First call: OIDC token during initialization
+      fetchStub.onCall(0).resolves({
+        ok: true,
+        text: () => Promise.resolve('initial-token-123'),
+      });
+
+      // Second call: Schema fetch
+      fetchStub.onCall(1).resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+
+      // Third call: Form data fetch
+      fetchStub.onCall(2).resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder
+          fbms-base-url="/api"
+          fbms-form-fname="test-form"
+          oidc-url="/auth/userinfo"
+        ></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+
+      // Set valid form data and trigger hasChanges
+      element.formData = {
+        name: 'John Doe',
+        email: 'john@example.com',
+      };
+      element.hasChanges = true;
+
+      fetchStub.reset();
+    });
+
+    it('should refresh token and retry on 403 when oidcUrl is configured', async () => {
+      // First submission attempt returns 403
+      fetchStub.onFirstCall().resolves({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      // Token refresh succeeds
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: () => Promise.resolve('new-token-xyz'),
+      });
+
+      // Retry submission succeeds
+      fetchStub.onThirdCall().resolves({
+        ok: true,
+        json: async () => ({}),
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      const { detail } = await oneEvent(element, 'form-submit-success');
+
+      // Verify the sequence
+      expect(fetchStub).to.have.been.calledThrice;
+
+      // First call: submission attempt
+      expect(fetchStub.firstCall.args[0]).to.include('/api/v1/submissions/test-form');
+
+      // Second call: token refresh
+      expect(fetchStub.secondCall.args[0]).to.equal('/auth/userinfo');
+
+      // Third call: retry submission
+      expect(fetchStub.thirdCall.args[0]).to.include('/api/v1/submissions/test-form');
+
+      // Verify new token was used in retry
+      const retryHeaders = fetchStub.thirdCall.args[1].headers;
+      expect(retryHeaders.Authorization).to.equal('Bearer new-token-xyz');
+
+      expect(detail.data.answers).to.deep.equal(element.formData);
+    });
+
+    it('should show error when retry also fails with 403', async () => {
+      // First submission attempt returns 403
+      fetchStub.onFirstCall().resolves({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      // Token refresh succeeds
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        text: () => Promise.resolve('new-token-xyz'),
+      });
+
+      // Retry submission also returns 403
+      fetchStub.onThirdCall().resolves({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      const { detail } = await oneEvent(element, 'form-submit-error');
+
+      expect(detail.error).to.include('Access denied even after token refresh');
+      expect(detail.error).to.include('may not have permission');
+      expect(element.error).to.exist;
+    });
+
+    it('should show generic error on 403 when oidcUrl is not configured', async () => {
+      // Clean up the existing element from beforeEach
+      if (element && element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+
+      // Reset fetch stub
+      fetchStub.reset();
+
+      // Schema fetch
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+
+      // Form data fetch
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      // Create element without oidcUrl
+      element = await fixture(html`
+        <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+
+      element.formData = {
+        name: 'John Doe',
+        email: 'john@example.com',
+      };
+      element.hasChanges = true;
+
+      // Reset again for the submission test
+      fetchStub.reset();
+
+      // Submission returns 403
+      fetchStub.resolves({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      const { detail } = await oneEvent(element, 'form-submit-error');
+
+      // Should only attempt submission once (no token refresh)
+      expect(fetchStub).to.have.been.calledOnce;
+      expect(detail.error).to.include('Failed to submit form');
+    });
+
+    it('should maintain submitting flag during token refresh and retry', async () => {
+      // First submission attempt returns 403
+      fetchStub.onFirstCall().resolves({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      // Token refresh - simulate delay
+      let resolveTokenRefresh;
+      fetchStub.onSecondCall().returns(
+        new Promise((resolve) => {
+          resolveTokenRefresh = resolve;
+        })
+      );
+
+      // Retry submission - also delayed so we can check submitting flag
+      let resolveRetry;
+      fetchStub.onThirdCall().returns(
+        new Promise((resolve) => {
+          resolveRetry = resolve;
+        })
+      );
+
+      const form = element.shadowRoot.querySelector('form');
+
+      // Don't wait for the submit to complete
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      // Wait for submitting to be true (initial submission)
+      await waitUntil(() => element.submitting);
+      expect(element.submitting).to.be.true;
+
+      // Resolve token refresh
+      resolveTokenRefresh({ ok: true, text: () => Promise.resolve('new-token') });
+
+      // Wait for the retry fetch to be called
+      await waitUntil(() => fetchStub.callCount >= 3);
+
+      // Submitting should still be true during retry
+      expect(element.submitting).to.be.true;
+
+      // Now resolve the retry
+      resolveRetry({ ok: true, json: async () => ({}) });
+
+      // Wait for completion
+      await waitUntil(() => !element.submitting);
+      expect(element.submitting).to.be.false;
+    });
+
+    it('should show error when token refresh fails', async () => {
+      // First submission attempt returns 403
+      fetchStub.onFirstCall().resolves({
+        ok: false,
+        status: 403,
+        statusText: 'Forbidden',
+      });
+
+      // Token refresh fails
+      fetchStub.onSecondCall().rejects(new Error('Network error'));
+
+      const form = element.shadowRoot.querySelector('form');
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      const { detail } = await oneEvent(element, 'form-submit-error');
+
+      expect(detail.error).to.include('Unable to refresh token');
+      expect(fetchStub).to.have.been.calledTwice; // No retry after failed token refresh
+    });
+  });
 });
 
 describe('FormBuilder - Nested Objects', () => {
