@@ -308,6 +308,15 @@ class FormBuilder extends LitElement {
       pointer-events: none;
       cursor: not-allowed;
     }
+
+    .info-only {
+      padding: 20px 0;
+    }
+
+    .info-only p {
+      line-height: 1.6;
+      color: #333;
+    }
   `;
 
   // Getter and setter for formData
@@ -1336,6 +1345,8 @@ class FormBuilder extends LitElement {
     }
 
     // Regular form view (rest of existing render code)
+    const hasFields = Object.keys(this.schema.properties).length > 0;
+
     return html`
       ${this.customStyles
         ? html`<style>
@@ -1344,46 +1355,57 @@ class FormBuilder extends LitElement {
         : ''}
 
       <div class="container">
-        <form @submit="${this.handleSubmit}" class="${this.submitting ? 'submitting' : ''}">
-          ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
-          ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
-          ${this.validationFailed
-            ? html`
-                <div class="status-message validation-error">
-                  ⚠ Please correct the errors below before submitting.
-                </div>
-              `
-            : ''}
-          ${this.submissionError
-            ? html`
-                <div class="status-message error">
-                  <strong>Error:</strong> ${this.submissionError}
-                  ${this.submissionStatus?.messages?.length > 0
-                    ? html`
-                        <ul>
-                          ${this.submissionStatus.messages.map((msg) => html`<li>${msg}</li>`)}
-                        </ul>
-                      `
-                    : ''}
-                </div>
-              `
-            : ''}
-          ${Object.entries(this.schema.properties).map(([fieldName, fieldSchema]) =>
-            this.renderField(fieldName, fieldSchema)
-          )}
+        ${hasFields
+          ? html`
+              <form @submit="${this.handleSubmit}" class="${this.submitting ? 'submitting' : ''}">
+                ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
+                ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
+                ${this.validationFailed
+                  ? html`
+                      <div class="status-message validation-error">
+                        ⚠ Please correct the errors below before submitting.
+                      </div>
+                    `
+                  : ''}
+                ${this.submissionError
+                  ? html`
+                      <div class="status-message error">
+                        <strong>Error:</strong> ${this.submissionError}
+                        ${this.submissionStatus?.messages?.length > 0
+                          ? html`
+                              <ul>
+                                ${this.submissionStatus.messages.map(
+                                  (msg) => html`<li>${msg}</li>`
+                                )}
+                              </ul>
+                            `
+                          : ''}
+                      </div>
+                    `
+                  : ''}
+                ${Object.entries(this.schema.properties).map(([fieldName, fieldSchema]) =>
+                  this.renderField(fieldName, fieldSchema)
+                )}
 
-          <div class="buttons">
-            <button type="submit" ?disabled="${this.submitting || !this.hasChanges}">
-              <span class="button-content">
-                ${this.submitting ? html`<span class="spinner"></span>` : ''}
-                ${this.submitting ? 'Submitting...' : 'Submit'}
-              </span>
-            </button>
-            <button type="button" @click="${this.handleReset}" ?disabled="${this.submitting}">
-              Reset
-            </button>
-          </div>
-        </form>
+                <div class="buttons">
+                  <button type="submit" ?disabled="${this.submitting || !this.hasChanges}">
+                    <span class="button-content">
+                      ${this.submitting ? html`<span class="spinner"></span>` : ''}
+                      ${this.submitting ? 'Submitting...' : 'Submit'}
+                    </span>
+                  </button>
+                  <button type="button" @click="${this.handleReset}" ?disabled="${this.submitting}">
+                    Reset
+                  </button>
+                </div>
+              </form>
+            `
+          : html`
+              <div class="info-only">
+                ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
+                ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
+              </div>
+            `}
       </div>
     `;
   }

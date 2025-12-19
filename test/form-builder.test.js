@@ -2982,17 +2982,21 @@ describe('Scroll Behavior', () => {
       await oneEvent(element, 'form-submit-error');
       await element.updateComplete;
 
-      // Verify error message exists and is displayed
+      // Verify submission error is set (not general error)
       expect(element.submissionError).to.exist;
+      expect(element.error).to.be.null; // General error should remain null
 
-      // The error is displayed in .status-message.error within the form
-      // (submissionError keeps the form visible, unlike initialization errors)
-      const errorMsg = element.shadowRoot.querySelector('.error');
+      // The form should still be visible
+      const formElement = element.shadowRoot.querySelector('form');
+      expect(formElement).to.exist;
+
+      // The error should be displayed in status-message.error within the form
+      const errorMsg = element.shadowRoot.querySelector('.status-message.error');
       expect(errorMsg).to.exist;
       expect(errorMsg.textContent).to.include('Server Error');
     });
 
-    it('should display error message on submission failure with server message', async () => {
+    it('should display server error messages in list format', async () => {
       fetchStub.resolves({
         ok: false,
         status: 400,
@@ -3012,20 +3016,100 @@ describe('Scroll Behavior', () => {
       await oneEvent(element, 'form-submit-error');
       await element.updateComplete;
 
-      // Verify the error state is set correctly
+      // Verify the submission error state is set correctly
       expect(element.submissionError).to.equal('Validation Failed');
 
-      // The error is displayed in the .status-message.error within the form
-      const errorMsg = element.shadowRoot.querySelector('.error');
+      // The form should still be visible
+      const formElement = element.shadowRoot.querySelector('form');
+      expect(formElement).to.exist;
+
+      // The error is displayed in .status-message.error with the messages list
+      const errorMsg = element.shadowRoot.querySelector('.status-message.error');
       expect(errorMsg).to.exist;
       expect(errorMsg.textContent).to.include('Validation Failed');
 
-      // The form should still be visible
-      // The error is displayed in .status-message.error with the messages list
-      expect(element.submissionStatus).to.exist;
-      expect(element.submissionStatus.messages).to.have.lengthOf(2);
-      expect(element.submissionStatus.messages[0]).to.equal('Field X is invalid');
-      expect(element.submissionStatus.messages[1]).to.equal('Field Y is required');
+      // Server messages should be displayed in list format
+      const messageList = errorMsg.querySelectorAll('li');
+      expect(messageList).to.have.lengthOf(2);
+      expect(messageList[0].textContent).to.equal('Field X is invalid');
+      expect(messageList[1].textContent).to.equal('Field Y is required');
+    });
+
+    it('should clear submission error when user modifies form', async () => {
+      fetchStub.resolves({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => ({ messageHeader: 'Server Error' }),
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      await oneEvent(element, 'form-submit-error');
+      await element.updateComplete;
+
+      // Verify error is shown
+      expect(element.submissionError).to.exist;
+      expect(element.shadowRoot.querySelector('.status-message.error')).to.exist;
+
+      // User modifies the form
+      const nameInput = element.shadowRoot.querySelector('input[name="name"]');
+      nameInput.value = 'Jane Doe';
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+      await element.updateComplete;
+
+      // Submission error should be cleared
+      expect(element.submissionError).to.be.null;
+      expect(element.shadowRoot.querySelector('.status-message.error')).to.not.exist;
+    });
+
+    it('should allow resubmission after error', async () => {
+      // First submission fails
+      fetchStub.onFirstCall().resolves({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => ({ messageHeader: 'Server Error' }),
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      await oneEvent(element, 'form-submit-error');
+      await element.updateComplete;
+
+      expect(element.submissionError).to.exist;
+
+      // User modifies form to fix issue
+      const nameInput = element.shadowRoot.querySelector('input[name="name"]');
+      nameInput.value = 'Jane Doe';
+      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+      await element.updateComplete;
+
+      // Second submission succeeds
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({}),
+        headers: new Headers(),
+      });
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      await oneEvent(element, 'form-submit-success');
+      await element.updateComplete;
+
+      expect(element.submissionError).to.be.null;
+      expect(element.formCompleted).to.be.true;
     });
   });
 
@@ -3098,5 +3182,85 @@ describe('Scroll Behavior', () => {
       // Should be within first few children (after h2/p if present)
       expect(warningIndex).to.be.lessThan(5);
     });
+  });
+});
+
+describe('Empty Schema (Info-Only Forms)', () => {
+  let element;
+  let fetchStub;
+
+  const mockEmptySchema = {
+    title: 'Email Address Validation',
+    description:
+      'An email was sent to the address you supplied for validation. You must locate the email and use the provided hyperlink to complete the email validation process.',
+    type: 'object',
+    properties: {},
+  };
+
+  const mockEmptySchemaResp = {
+    fname: 'validate-email',
+    version: 1,
+    schema: mockEmptySchema,
+    metadata: {},
+  };
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => mockEmptySchemaResp,
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="validate-email"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  it('should render title for empty schema', () => {
+    const title = element.shadowRoot.querySelector('h2');
+    expect(title).to.exist;
+    expect(title.textContent).to.equal('Email Address Validation');
+  });
+
+  it('should render description for empty schema', () => {
+    const description = element.shadowRoot.querySelector('p');
+    expect(description).to.exist;
+    expect(description.textContent).to.include('An email was sent to the address');
+  });
+
+  it('should not render form element for empty schema', () => {
+    const form = element.shadowRoot.querySelector('form');
+    expect(form).to.not.exist;
+  });
+
+  it('should not render submit button for empty schema', () => {
+    const submitButton = element.shadowRoot.querySelector('button[type="submit"]');
+    expect(submitButton).to.not.exist;
+  });
+
+  it('should not render reset button for empty schema', () => {
+    const resetButton = element.shadowRoot.querySelector('button[type="button"]');
+    expect(resetButton).to.not.exist;
+  });
+
+  it('should render info-only container for empty schema', () => {
+    const infoOnly = element.shadowRoot.querySelector('.info-only');
+    expect(infoOnly).to.exist;
+  });
+
+  it('should not render any form inputs for empty schema', () => {
+    const inputs = element.shadowRoot.querySelectorAll('input, select, textarea');
+    expect(inputs).to.have.lengthOf(0);
   });
 });
