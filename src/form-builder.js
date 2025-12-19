@@ -760,6 +760,7 @@ class FormBuilder extends LitElement {
         if (fieldSchema.format === 'email') {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
+            // Support both 'format' (generic) and 'email' (specific) custom message keys
             const customMsg =
               this.getCustomErrorMessage(fieldPath, 'format') ||
               this.getCustomErrorMessage(fieldPath, 'email');
@@ -928,7 +929,8 @@ class FormBuilder extends LitElement {
       // Check for form forwarding header (safely handle missing headers object)
       const formForward = response.headers?.get ? response.headers.get('x-fbms-formforward') : null;
       if (formForward) {
-        console.warn(`Form submitted successfully. Forwarding to next form: ${formForward}`);
+        // eslint-disable-next-line no-console
+        console.info(`Form submitted successfully. Forwarding to next form: ${formForward}`);
         this.fbmsFormFname = formForward;
 
         // Clear current form state
@@ -938,9 +940,16 @@ class FormBuilder extends LitElement {
 
         // Re-initialize with the new form
         this.loading = true;
-        await this.initialize();
-        return; // Exit early, don't show success message for intermediate form
-        // Note: finally block will set submitting = false
+        try {
+          await this.initialize();
+          return; // Exit early, don't show success message for intermediate form
+          // Note: finally block will set submitting = false
+        } catch (forwardingError) {
+          console.error('Failed to load forwarded form:', forwardingError);
+          this.loading = false;
+          this.submissionError =
+            forwardingError?.message || 'Form was submitted, but loading the next form failed.';
+        }
       }
 
       // Dispatch success event
@@ -1313,7 +1322,7 @@ class FormBuilder extends LitElement {
 
         <div class="container">
           <div class="status-message success">
-            <h3>✓ Form Submitted Successfully!</h3>
+            <h2>✓ Form submitted successfully!</h2>
             ${this.submissionStatus?.messages?.length > 0
               ? html`
                   <ul>

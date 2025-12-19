@@ -2262,7 +2262,7 @@ describe('Server Response Messages', () => {
     // Success message should be displayed
     const successMessage = element.shadowRoot.querySelector('.status-message.success');
     expect(successMessage).to.exist;
-    expect(successMessage.textContent).to.include('Form Submitted Successfully');
+    expect(successMessage.textContent).to.include('Form submitted successfully');
 
     // No message list since submissionStatus is empty
     const messageList = successMessage.querySelectorAll('li');
@@ -2714,7 +2714,7 @@ describe('Form Completion and Forwarding', () => {
     // Success message should be visible
     const successMessage = element.shadowRoot.querySelector('.status-message.success');
     expect(successMessage).to.exist;
-    expect(successMessage.textContent).to.include('Form Submitted Successfully');
+    expect(successMessage.textContent).to.include('Form submitted successfully');
 
     // Server messages should be displayed
     const messageList = successMessage.querySelectorAll('li');
@@ -3062,7 +3062,7 @@ describe('Scroll Behavior', () => {
       // Success message should be visible
       const successMsg = element.shadowRoot.querySelector('.status-message.success');
       expect(successMsg).to.exist;
-      expect(successMsg.textContent).to.include('Form Submitted Successfully');
+      expect(successMsg.textContent).to.include('Form submitted successfully');
     });
   });
 
