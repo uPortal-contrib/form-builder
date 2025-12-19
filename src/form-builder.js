@@ -948,9 +948,9 @@ class FormBuilder extends LitElement {
         console.info(`Form submitted successfully. Forwarding to next form: ${formForward}`);
         this.fbmsFormFname = formForward;
 
-        // Clear current form state
-        this.submitSuccess = false;
-        this.submissionStatus = null;
+        // Keep success state and messages visible for the forwarded form
+        this.submitSuccess = true;
+        // Note: submissionStatus is preserved to show server messages on the next form
         this.formCompleted = false;
 
         // Re-initialize with the new form
@@ -1378,6 +1378,20 @@ class FormBuilder extends LitElement {
         : ''}
 
       <div class="container">
+        ${this.submitSuccess
+          ? html`
+              <div class="status-message success">
+                ✓ Your form was successfully submitted.
+                ${this.submissionStatus?.messages?.length > 0
+                  ? html`
+                      <ul>
+                        ${this.submissionStatus.messages.map((msg) => html`<li>${msg}</li>`)}
+                      </ul>
+                    `
+                  : ''}
+              </div>
+            `
+          : ''}
         ${hasFields
           ? html`
               <form @submit="${this.handleSubmit}" class="${this.submitting ? 'submitting' : ''}">

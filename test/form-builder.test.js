@@ -2771,7 +2771,7 @@ describe('Form Completion and Forwarding', () => {
     expect(element.fbmsFormFname).to.equal('next-form');
     expect(element.schema.title).to.equal('Next Form');
     expect(element.formCompleted).to.be.false; // Not completed yet, moved to next form
-    expect(element.submitSuccess).to.be.false; // No success message for intermediate form
+    expect(element.submitSuccess).to.be.true; // Success message for intermediate form
 
     // Form should still be visible (for the next form)
     const nextForm = element.shadowRoot.querySelector('form');
@@ -3349,5 +3349,598 @@ describe('Single-Value Enum Fields', () => {
     const label = element.shadowRoot.querySelector('.info-label');
     expect(label).to.exist;
     expect(label.textContent).to.include('You are enrolled in emergency notifications');
+  });
+});
+
+describe('Form Forwarding with Success Messages', () => {
+  let element;
+  let fetchStub;
+
+  const mockSchema = {
+    title: 'Communication Preferences',
+    type: 'object',
+    required: ['email'],
+    properties: {
+      email: { type: 'string', title: 'Email' },
+    },
+  };
+
+  const mockEndStateSchema = {
+    title: 'Thank You',
+    description: 'Thank you for updating our records.',
+    type: 'object',
+    properties: {},
+  };
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => ({
+        fname: 'communication-preferences',
+        version: 1,
+        schema: mockSchema,
+        metadata: {},
+      }),
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="communication-preferences"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  it('should display success message with server messages on forwarded form', async () => {
+    element.formData = { email: 'test@example.com' };
+    element.hasChanges = true;
+    fetchStub.reset();
+
+    // Mock submission response with forward header and messages
+    const mockHeaders = new Headers();
+    mockHeaders.set('x-fbms-formforward', 'end-state-form-entity');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => ({
+        success: true,
+        messages: ['An email was sent to the address you supplied for validation.'],
+      }),
+      headers: mockHeaders,
+    });
+
+    // Mock schema fetch for forwarded form
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({
+        fname: 'end-state-form-entity',
+        version: 1,
+        schema: mockEndStateSchema,
+        metadata: {},
+      }),
+    });
+
+    // Mock form data fetch for forwarded form
+    fetchStub.onThirdCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await waitUntil(() => !element.loading && element.schema.title === 'Thank You');
+
+    // Verify success message is displayed
+    expect(element.submitSuccess).to.be.true;
+    const successMsg = element.shadowRoot.querySelector('.status-message.success');
+    expect(successMsg).to.exist;
+    expect(successMsg.textContent).to.include('successfully submitted');
+
+    // Verify server messages are displayed
+    const messageList = successMsg.querySelectorAll('li');
+    expect(messageList).to.have.lengthOf(1);
+    expect(messageList[0].textContent).to.include('An email was sent');
+
+    // Verify the forwarded form title is shown
+    const title = element.shadowRoot.querySelector('h2');
+    expect(title.textContent).to.equal('Thank You');
+  });
+});
+
+describe('Single-Value Enum Fields', () => {
+  // Add these tests to form-builder.test.js
+  // These tests use the same imports as the existing test file:
+  // import { html, fixture, expect, waitUntil, oneEvent, elementUpdated } from '@open-wc/testing';
+  // import { stub } from 'sinon';
+  // import '../src/form-builder.js';
+
+  describe('Scroll Behavior', () => {
+    let element;
+    let fetchStub;
+
+    const mockSchema = {
+      title: 'Test Form',
+      type: 'object',
+      required: ['name', 'email'],
+      properties: {
+        name: {
+          type: 'string',
+          title: 'Name',
+        },
+        email: {
+          type: 'string',
+          title: 'Email',
+          format: 'email',
+        },
+      },
+    };
+
+    const mockSchemaResp = {
+      fname: 'test-form',
+      version: 1,
+      schema: mockSchema,
+      metadata: {},
+    };
+
+    beforeEach(async () => {
+      fetchStub = stub(window, 'fetch');
+
+      fetchStub.onFirstCall().resolves({
+        ok: true,
+        json: async () => mockSchemaResp,
+      });
+      fetchStub.onSecondCall().resolves({
+        ok: true,
+        json: async () => ({ answers: {} }),
+      });
+
+      element = await fixture(html`
+        <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+      `);
+
+      await waitUntil(() => !element.loading);
+    });
+
+    afterEach(() => {
+      fetchStub.restore();
+    });
+
+    describe('Validation Error Scroll', () => {
+      it('should scroll to validation warning banner on validation failure', async () => {
+        // Submit empty form to trigger validation
+        const form = element.shadowRoot.querySelector('form');
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+        await element.updateComplete;
+
+        // Verify validation warning exists
+        const validationWarning = element.shadowRoot.querySelector(
+          '.status-message.validation-error'
+        );
+        expect(validationWarning).to.exist;
+        expect(validationWarning.textContent).to.include('Please correct the errors below');
+      });
+
+      it('should have validation warning rendered before field errors', async () => {
+        // Submit empty form to trigger validation
+        const form = element.shadowRoot.querySelector('form');
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+        await element.updateComplete;
+
+        // Check DOM order - validation warning should come before form fields
+        const container = element.shadowRoot.querySelector('.container');
+        const validationWarning = container.querySelector('.status-message.validation-error');
+        const firstFormGroup = container.querySelector('.form-group');
+
+        // Get positions in DOM
+        const allElements = Array.from(container.querySelectorAll('*'));
+        const warningPosition = allElements.indexOf(validationWarning);
+        const formGroupPosition = allElements.indexOf(firstFormGroup);
+
+        expect(warningPosition).to.be.lessThan(formGroupPosition);
+      });
+    });
+
+    describe('Submission Error Scroll', () => {
+      beforeEach(() => {
+        element.formData = {
+          name: 'John Doe',
+          email: 'john@example.com',
+        };
+        element.hasChanges = true;
+        fetchStub.reset();
+      });
+
+      it('should scroll to error message on submission failure', async () => {
+        fetchStub.resolves({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          json: async () => ({ messageHeader: 'Server Error' }),
+        });
+
+        const form = element.shadowRoot.querySelector('form');
+
+        setTimeout(() => {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+
+        await oneEvent(element, 'form-submit-error');
+        await element.updateComplete;
+
+        // Verify submission error is set (not general error)
+        expect(element.submissionError).to.exist;
+        expect(element.error).to.be.null; // General error should remain null
+
+        // The form should still be visible
+        const formElement = element.shadowRoot.querySelector('form');
+        expect(formElement).to.exist;
+
+        // The error should be displayed in status-message.error within the form
+        const errorMsg = element.shadowRoot.querySelector('.status-message.error');
+        expect(errorMsg).to.exist;
+        expect(errorMsg.textContent).to.include('Server Error');
+      });
+
+      it('should display server error messages in list format', async () => {
+        fetchStub.resolves({
+          ok: false,
+          status: 400,
+          statusText: 'Bad Request',
+          json: async () => ({
+            messageHeader: 'Validation Failed',
+            messages: ['Field X is invalid', 'Field Y is required'],
+          }),
+        });
+
+        const form = element.shadowRoot.querySelector('form');
+
+        setTimeout(() => {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+
+        await oneEvent(element, 'form-submit-error');
+        await element.updateComplete;
+
+        // Verify the submission error state is set correctly
+        expect(element.submissionError).to.equal('Validation Failed');
+
+        // The form should still be visible
+        const formElement = element.shadowRoot.querySelector('form');
+        expect(formElement).to.exist;
+
+        // The error is displayed in .status-message.error with the messages list
+        const errorMsg = element.shadowRoot.querySelector('.status-message.error');
+        expect(errorMsg).to.exist;
+        expect(errorMsg.textContent).to.include('Validation Failed');
+
+        // Server messages should be displayed in list format
+        const messageList = errorMsg.querySelectorAll('li');
+        expect(messageList).to.have.lengthOf(2);
+        expect(messageList[0].textContent).to.equal('Field X is invalid');
+        expect(messageList[1].textContent).to.equal('Field Y is required');
+      });
+
+      it('should clear submission error when user modifies form', async () => {
+        fetchStub.resolves({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          json: async () => ({ messageHeader: 'Server Error' }),
+        });
+
+        const form = element.shadowRoot.querySelector('form');
+
+        setTimeout(() => {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+
+        await oneEvent(element, 'form-submit-error');
+        await element.updateComplete;
+
+        // Verify error is shown
+        expect(element.submissionError).to.exist;
+        expect(element.shadowRoot.querySelector('.status-message.error')).to.exist;
+
+        // User modifies the form
+        const nameInput = element.shadowRoot.querySelector('input[name="name"]');
+        nameInput.value = 'Jane Doe';
+        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+        await element.updateComplete;
+
+        // Submission error should be cleared
+        expect(element.submissionError).to.be.null;
+        expect(element.shadowRoot.querySelector('.status-message.error')).to.not.exist;
+      });
+
+      it('should allow resubmission after error', async () => {
+        // First submission fails
+        fetchStub.onFirstCall().resolves({
+          ok: false,
+          status: 500,
+          statusText: 'Internal Server Error',
+          json: async () => ({ messageHeader: 'Server Error' }),
+        });
+
+        const form = element.shadowRoot.querySelector('form');
+
+        setTimeout(() => {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+
+        await oneEvent(element, 'form-submit-error');
+        await element.updateComplete;
+
+        expect(element.submissionError).to.exist;
+
+        // User modifies form to fix issue
+        const nameInput = element.shadowRoot.querySelector('input[name="name"]');
+        nameInput.value = 'Jane Doe';
+        nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+        await element.updateComplete;
+
+        // Second submission succeeds
+        fetchStub.onSecondCall().resolves({
+          ok: true,
+          json: async () => ({}),
+          headers: new Headers(),
+        });
+
+        setTimeout(() => {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+
+        await oneEvent(element, 'form-submit-success');
+        await element.updateComplete;
+
+        expect(element.submissionError).to.be.null;
+        expect(element.formCompleted).to.be.true;
+      });
+    });
+
+    describe('Success Scroll', () => {
+      beforeEach(() => {
+        element.formData = {
+          name: 'John Doe',
+          email: 'john@example.com',
+        };
+        element.hasChanges = true;
+        fetchStub.reset();
+      });
+
+      it('should scroll to success message on successful submission', async () => {
+        fetchStub.resolves({
+          ok: true,
+          json: async () => ({ messages: ['Form submitted!'] }),
+          headers: new Headers(),
+        });
+
+        const form = element.shadowRoot.querySelector('form');
+
+        setTimeout(() => {
+          form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+        });
+
+        await oneEvent(element, 'form-submit-success');
+        await element.updateComplete;
+
+        // Verify success state
+        expect(element.formCompleted).to.be.true;
+        expect(element.submitSuccess).to.be.true;
+
+        // Success message should be visible
+        const successMsg = element.shadowRoot.querySelector('.status-message.success');
+        expect(successMsg).to.exist;
+        expect(successMsg.textContent).to.include('Form submitted successfully');
+      });
+    });
+
+    describe('Scroll Target Elements', () => {
+      it('should have validation-error class on validation warning', async () => {
+        const form = element.shadowRoot.querySelector('form');
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+        await element.updateComplete;
+
+        const warning = element.shadowRoot.querySelector('.status-message.validation-error');
+        expect(warning).to.exist;
+        expect(warning.classList.contains('status-message')).to.be.true;
+        expect(warning.classList.contains('validation-error')).to.be.true;
+      });
+
+      it('should position validation warning near top of form', async () => {
+        const form = element.shadowRoot.querySelector('form');
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+        await element.updateComplete;
+
+        const warning = element.shadowRoot.querySelector('.status-message.validation-error');
+        expect(warning).to.exist;
+
+        // The warning should be near the top of the form (after title/description)
+        const formElement = element.shadowRoot.querySelector('form');
+        const formChildren = Array.from(formElement.children);
+        const warningIndex = formChildren.findIndex((child) =>
+          child.classList?.contains('status-message')
+        );
+
+        // Should be within first few children (after h2/p if present)
+        expect(warningIndex).to.be.lessThan(5);
+      });
+    });
+  });
+});
+
+describe('Empty Schema (Info-Only Forms)', () => {
+  let element;
+  let fetchStub;
+
+  const mockEmptySchema = {
+    title: 'Email Address Validation',
+    description:
+      'An email was sent to the address you supplied for validation. You must locate the email and use the provided hyperlink to complete the email validation process.',
+    type: 'object',
+    properties: {},
+  };
+
+  const mockEmptySchemaResp = {
+    fname: 'validate-email',
+    version: 1,
+    schema: mockEmptySchema,
+    metadata: {},
+  };
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => mockEmptySchemaResp,
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="validate-email"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  it('should render title for empty schema', () => {
+    const title = element.shadowRoot.querySelector('h2');
+    expect(title).to.exist;
+    expect(title.textContent).to.equal('Email Address Validation');
+  });
+
+  it('should render description for empty schema', () => {
+    const description = element.shadowRoot.querySelector('p');
+    expect(description).to.exist;
+    expect(description.textContent).to.include('An email was sent to the address');
+  });
+
+  it('should not render form element for empty schema', () => {
+    const form = element.shadowRoot.querySelector('form');
+    expect(form).to.not.exist;
+  });
+
+  it('should not render submit button for empty schema', () => {
+    const submitButton = element.shadowRoot.querySelector('button[type="submit"]');
+    expect(submitButton).to.not.exist;
+  });
+
+  it('should not render reset button for empty schema', () => {
+    const resetButton = element.shadowRoot.querySelector('button[type="button"]');
+    expect(resetButton).to.not.exist;
+  });
+
+  it('should render info-only container for empty schema', () => {
+    const infoOnly = element.shadowRoot.querySelector('.info-only');
+    expect(infoOnly).to.exist;
+  });
+
+  it('should not render any form inputs for empty schema', () => {
+    const inputs = element.shadowRoot.querySelectorAll('input, select, textarea');
+    expect(inputs).to.have.lengthOf(0);
+  });
+});
+
+describe('Single-Value Enum Fields', () => {
+  let element;
+  let fetchStub;
+
+  const mockSchemaWithSingleEnum = {
+    title: 'Test Form',
+    type: 'object',
+    properties: {
+      notification_status: {
+        title: 'You are enrolled in emergency notifications by default per District Policy.',
+        type: 'string',
+        enum: ['Default'],
+      },
+      preference: {
+        title: 'Preference',
+        type: 'string',
+        enum: ['Yes', 'No'],
+      },
+    },
+  };
+
+  const mockSchemaResp = {
+    fname: 'test-form',
+    version: 1,
+    schema: mockSchemaWithSingleEnum,
+    metadata: {
+      notification_status: {
+        'ui:widget': 'radio',
+      },
+      preference: {
+        'ui:widget': 'radio',
+      },
+    },
+  };
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => mockSchemaResp,
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  it('should render single-value enum as informational text only (no input)', () => {
+    // Should NOT have a radio button for single-value enum
+    const singleEnumRadios = element.shadowRoot.querySelectorAll(
+      'input[name="notification_status"]'
+    );
+    expect(singleEnumRadios).to.have.lengthOf(0);
+
+    // Should NOT have any select or other input for this field
+    const singleEnumSelect = element.shadowRoot.querySelector('select[name="notification_status"]');
+    expect(singleEnumSelect).to.not.exist;
+  });
+
+  it('should still render multi-value enum as radio buttons', () => {
+    const preferenceRadios = element.shadowRoot.querySelectorAll('input[name="preference"]');
+    expect(preferenceRadios).to.have.lengthOf(2);
+  });
+
+  it('should display the field title for single-value enum', () => {
+    const infoLabel = element.shadowRoot.querySelector('.info-label');
+    expect(infoLabel).to.exist;
+    expect(infoLabel.textContent).to.include('You are enrolled in emergency notifications');
   });
 });
