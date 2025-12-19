@@ -2611,13 +2611,13 @@ describe('getCustomErrorMessage Helper', () => {
 
   it('should return null for non-existent rule', () => {
     const message = element.getCustomErrorMessage('email', 'nonexistent');
-    expect(message).to.be.undefined;
+    expect(message).to.be.null;
   });
 
   it('should return null for field without messages', () => {
     element.schema.properties.noMessages = { type: 'string' };
     const message = element.getCustomErrorMessage('noMessages', 'required');
-    expect(message).to.be.undefined;
+    expect(message).to.be.null;
   });
 });
 
@@ -2866,11 +2866,6 @@ describe('Form Completion and Forwarding', () => {
     expect(element.shadowRoot.textContent).to.include('All forms completed!');
   });
 });
-// Add these tests to form-builder.test.js
-// These tests use the same imports as the existing test file:
-// import { html, fixture, expect, waitUntil, oneEvent, elementUpdated } from '@open-wc/testing';
-// import { stub } from 'sinon';
-// import '../src/form-builder.js';
 
 describe('Scroll Behavior', () => {
   let element;
@@ -2990,8 +2985,8 @@ describe('Scroll Behavior', () => {
       // Verify error message exists and is displayed
       expect(element.submissionError).to.exist;
 
-      // The error is displayed in the top-level .error div
-      // (the early return in render() shows this view when this.error is set)
+      // The error is displayed in .status-message.error within the form
+      // (submissionError keeps the form visible, unlike initialization errors)
       const errorMsg = element.shadowRoot.querySelector('.error');
       expect(errorMsg).to.exist;
       expect(errorMsg.textContent).to.include('Server Error');
@@ -3020,14 +3015,13 @@ describe('Scroll Behavior', () => {
       // Verify the error state is set correctly
       expect(element.submissionError).to.equal('Validation Failed');
 
-      // The error is displayed in the top-level .error div
+      // The error is displayed in the .status-message.error within the form
       const errorMsg = element.shadowRoot.querySelector('.error');
       expect(errorMsg).to.exist;
       expect(errorMsg.textContent).to.include('Validation Failed');
 
-      // Note: The current implementation shows the simple error view (early return in render)
-      // which doesn't include the detailed messages list. The submissionStatus is stored
-      // but not displayed in this view. This is existing behavior.
+      // The form should still be visible
+      // The error is displayed in .status-message.error with the messages list
       expect(element.submissionStatus).to.exist;
       expect(element.submissionStatus.messages).to.have.lengthOf(2);
       expect(element.submissionStatus.messages[0]).to.equal('Field X is invalid');

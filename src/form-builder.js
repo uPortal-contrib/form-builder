@@ -326,6 +326,7 @@ class FormBuilder extends LitElement {
    * Get custom error message from schema if available
    * Follows the pattern: schema.properties.fieldName.messages.ruleName
    * For nested fields: schema.properties.parent.properties.child.messages.ruleName
+   * Returns null if field, messages, or rule doesn't exist
    */
   getCustomErrorMessage(fieldPath, ruleName) {
     const pathParts = fieldPath.split('.');
@@ -338,7 +339,7 @@ class FormBuilder extends LitElement {
     }
 
     // Check for custom message
-    return current?.messages?.[ruleName];
+    return current?.messages?.[ruleName] ?? null;
   }
 
   constructor() {
@@ -933,12 +934,13 @@ class FormBuilder extends LitElement {
         // Clear current form state
         this.submitSuccess = false;
         this.submissionStatus = null;
+        this.formCompleted = false;
 
         // Re-initialize with the new form
         this.loading = true;
-        this.submitting = false;
         await this.initialize();
         return; // Exit early, don't show success message for intermediate form
+        // Note: finally block will set submitting = false
       }
 
       // Dispatch success event
