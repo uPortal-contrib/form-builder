@@ -317,6 +317,12 @@ class FormBuilder extends LitElement {
       line-height: 1.6;
       color: #333;
     }
+
+    .info-label {
+      font-weight: 500;
+      color: #333;
+      display: block;
+    }
   `;
 
   // Getter and setter for formData
@@ -1029,6 +1035,18 @@ class FormBuilder extends LitElement {
       return this.renderNestedObject(fieldName, fieldSchema, basePath, depth);
     }
 
+    // Single-value enum - render as informational text only (title serves as the message)
+    if (fieldSchema.enum && fieldSchema.enum.length === 1) {
+      return html`
+        <div class="form-group">
+          <span class="info-label">${fieldSchema.title || fieldName}</span>
+          ${fieldSchema.description
+            ? html`<span class="description">${fieldSchema.description}</span>`
+            : ''}
+        </div>
+      `;
+    }
+
     // Regular field
     const value = this.getNestedValue(fieldPath);
     const error = this.fieldErrors[fieldPath];
@@ -1088,6 +1106,11 @@ class FormBuilder extends LitElement {
     const { type, enum: enumValues, format, items } = fieldSchema;
     const widget = uiOptions['ui:widget'];
     const isInline = uiOptions['ui:options']?.inline;
+
+    // Single-value enum - no input needed, title/label already displays the message
+    if (enumValues && enumValues.length === 1) {
+      return html``;
+    }
 
     // Array of enums with checkboxes widget - render as checkboxes
     if (type === 'array' && items?.enum && widget === 'checkboxes') {

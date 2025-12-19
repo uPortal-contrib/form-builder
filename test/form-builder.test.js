@@ -2866,6 +2866,11 @@ describe('Form Completion and Forwarding', () => {
     expect(element.shadowRoot.textContent).to.include('All forms completed!');
   });
 });
+// Add these tests to form-builder.test.js
+// These tests use the same imports as the existing test file:
+// import { html, fixture, expect, waitUntil, oneEvent, elementUpdated } from '@open-wc/testing';
+// import { stub } from 'sinon';
+// import '../src/form-builder.js';
 
 describe('Scroll Behavior', () => {
   let element;
@@ -3262,5 +3267,87 @@ describe('Empty Schema (Info-Only Forms)', () => {
   it('should not render any form inputs for empty schema', () => {
     const inputs = element.shadowRoot.querySelectorAll('input, select, textarea');
     expect(inputs).to.have.lengthOf(0);
+  });
+});
+
+describe('Single-Value Enum Fields', () => {
+  let element;
+  let fetchStub;
+
+  const mockSchemaWithSingleEnum = {
+    title: 'Test Form',
+    type: 'object',
+    properties: {
+      notification_status: {
+        title: 'You are enrolled in emergency notifications by default per District Policy.',
+        type: 'string',
+        enum: ['Default'],
+      },
+      preference: {
+        title: 'Preference',
+        type: 'string',
+        enum: ['Yes', 'No'],
+      },
+    },
+  };
+
+  const mockSchemaResp = {
+    fname: 'test-form',
+    version: 1,
+    schema: mockSchemaWithSingleEnum,
+    metadata: {
+      notification_status: {
+        'ui:widget': 'radio',
+      },
+      preference: {
+        'ui:widget': 'radio',
+      },
+    },
+  };
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => mockSchemaResp,
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  it('should render single-value enum as informational text only (no input)', () => {
+    // Should NOT have a radio button for single-value enum
+    const singleEnumRadios = element.shadowRoot.querySelectorAll(
+      'input[name="notification_status"]'
+    );
+    expect(singleEnumRadios).to.have.lengthOf(0);
+
+    // Should NOT have any select or other input for this field
+    const singleEnumSelect = element.shadowRoot.querySelector('select[name="notification_status"]');
+    expect(singleEnumSelect).to.not.exist;
+  });
+
+  it('should still render multi-value enum as radio buttons', () => {
+    const preferenceRadios = element.shadowRoot.querySelectorAll('input[name="preference"]');
+    expect(preferenceRadios).to.have.lengthOf(2);
+  });
+
+  it('should display the field title/label for single-value enum', () => {
+    const label = element.shadowRoot.querySelector('.info-label');
+    expect(label).to.exist;
+    expect(label.textContent).to.include('You are enrolled in emergency notifications');
   });
 });
