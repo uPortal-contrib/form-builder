@@ -919,6 +919,23 @@ class FormBuilder extends LitElement {
         throw new Error(errorMessage);
       }
 
+      // Check for form forwarding header
+      const formForward = response.headers?.get ? response.headers.get('x-fbms-formforward') : null;
+      if (formForward) {
+        console.warn(`Form submitted successfully. Forwarding to next form: ${formForward}`);
+        this.fbmsFormFname = formForward;
+
+        // Clear current form state
+        this.submitSuccess = false;
+        this.submissionStatus = null;
+
+        // Re-initialize with the new form
+        this.loading = true;
+        this.submitting = false;
+        await this.initialize();
+        return; // Exit early, don't show success message for intermediate form
+      }
+
       // Dispatch success event
       this.dispatchEvent(
         new CustomEvent('form-submit-success', {
@@ -930,10 +947,10 @@ class FormBuilder extends LitElement {
 
       this.submitSuccess = true;
       this.error = null;
-      this.initialFormData = this.deepClone(this.formData); // Use deepClone
+      this.initialFormData = this.deepClone(this.formData);
       this.hasChanges = false;
 
-      await this.updateComplete; // Wait for render to complete
+      await this.updateComplete;
 
       // Scroll to success message
       const successMsg = this.shadowRoot.querySelector('.status-message.success');
