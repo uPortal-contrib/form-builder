@@ -2246,7 +2246,7 @@ describe('Server Response Messages', () => {
       json: async () => ({}),
     });
 
-    const form = element.shadowRoot.querySelector('form');
+    let form = element.shadowRoot.querySelector('form');
 
     setTimeout(() => {
       form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
@@ -2255,12 +2255,22 @@ describe('Server Response Messages', () => {
     await oneEvent(element, 'form-submit-success');
     await element.updateComplete;
 
+    // Verify state flags
+    expect(element.submitSuccess).to.be.true;
+    expect(element.formCompleted).to.be.true;
+
+    // Success message should be displayed
     const successMessage = element.shadowRoot.querySelector('.status-message.success');
     expect(successMessage).to.exist;
-    expect(successMessage.textContent).to.include('Form submitted successfully');
+    expect(successMessage.textContent).to.include('Form Submitted Successfully');
 
+    // No message list since submissionStatus is empty
     const messageList = successMessage.querySelectorAll('li');
     expect(messageList).to.have.lengthOf(0);
+
+    // Form should NOT be visible when completed
+    form = element.shadowRoot.querySelector('form');
+    expect(form).to.not.exist;
   });
 
   it('should handle non-JSON error responses gracefully', async () => {
@@ -2608,5 +2618,251 @@ describe('getCustomErrorMessage Helper', () => {
     element.schema.properties.noMessages = { type: 'string' };
     const message = element.getCustomErrorMessage('noMessages', 'required');
     expect(message).to.be.undefined;
+  });
+});
+
+describe('Form Completion and Forwarding', () => {
+  let element;
+  let fetchStub;
+
+  const mockSchema = {
+    title: 'Test Form',
+    type: 'object',
+    required: ['name'],
+    properties: {
+      name: {
+        type: 'string',
+        title: 'Name',
+      },
+    },
+  };
+
+  const mockSchemaResp = {
+    fname: 'test-form',
+    version: 1,
+    schema: mockSchema,
+    metadata: {},
+  };
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => mockSchemaResp,
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+
+    element.formData = { name: 'John Doe' };
+    element.hasChanges = true;
+
+    fetchStub.reset();
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  it('should set formCompleted to true on successful submission without forward', async () => {
+    fetchStub.resolves({
+      ok: true,
+      json: async () => ({}),
+      headers: new Headers(),
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+    setTimeout(() => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    await oneEvent(element, 'form-submit-success');
+
+    expect(element.formCompleted).to.be.true;
+    expect(element.submitSuccess).to.be.true;
+  });
+
+  it('should hide form and show success message when formCompleted is true', async () => {
+    fetchStub.resolves({
+      ok: true,
+      json: async () => ({
+        messages: ['Thank you for submitting!', 'You will receive a confirmation email.'],
+      }),
+      headers: new Headers(),
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+    setTimeout(() => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    await oneEvent(element, 'form-submit-success');
+    await element.updateComplete;
+
+    // Form should not be visible
+    const formElement = element.shadowRoot.querySelector('form');
+    expect(formElement).to.not.exist;
+
+    // Success message should be visible
+    const successMessage = element.shadowRoot.querySelector('.status-message.success');
+    expect(successMessage).to.exist;
+    expect(successMessage.textContent).to.include('Form Submitted Successfully');
+
+    // Server messages should be displayed
+    const messageList = successMessage.querySelectorAll('li');
+    expect(messageList).to.have.lengthOf(2);
+    expect(messageList[0].textContent).to.equal('Thank you for submitting!');
+  });
+
+  it('should forward to next form when x-fbms-formforward header is present', async () => {
+    const nextFormSchema = {
+      fname: 'next-form',
+      version: 1,
+      schema: {
+        title: 'Next Form',
+        type: 'object',
+        properties: {
+          email: {
+            type: 'string',
+            title: 'Email',
+          },
+        },
+      },
+      metadata: {},
+    };
+
+    // Mock submission response with forward header
+    const mockHeaders = new Headers();
+    mockHeaders.set('x-fbms-formforward', 'next-form');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => ({}),
+      headers: mockHeaders,
+    });
+
+    // Mock schema fetch for next form
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => nextFormSchema,
+    });
+
+    // Mock form data fetch for next form
+    fetchStub.onThirdCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    // Wait for re-initialization to complete
+    await waitUntil(() => !element.loading && element.schema.title === 'Next Form');
+
+    // Should have loaded the next form
+    expect(element.fbmsFormFname).to.equal('next-form');
+    expect(element.schema.title).to.equal('Next Form');
+    expect(element.formCompleted).to.be.false; // Not completed yet, moved to next form
+    expect(element.submitSuccess).to.be.false; // No success message for intermediate form
+
+    // Form should still be visible (for the next form)
+    const nextForm = element.shadowRoot.querySelector('form');
+    expect(nextForm).to.exist;
+  });
+
+  it('should not set formCompleted when forwarding to next form', async () => {
+    const mockHeaders = new Headers();
+    mockHeaders.set('x-fbms-formforward', 'next-form');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => ({}),
+      headers: mockHeaders,
+    });
+
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => mockSchemaResp,
+    });
+
+    fetchStub.onThirdCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await waitUntil(() => !element.loading);
+
+    expect(element.formCompleted).to.be.false;
+  });
+
+  it('should handle form forward chain and only show success on final form', async () => {
+    // First form submission -> forward to form2
+    const headers1 = new Headers();
+    headers1.set('x-fbms-formforward', 'form2');
+
+    fetchStub.onCall(0).resolves({
+      ok: true,
+      json: async () => ({}),
+      headers: headers1,
+    });
+
+    // Load form2 schema
+    fetchStub.onCall(1).resolves({
+      ok: true,
+      json: async () => ({
+        fname: 'form2',
+        version: 1,
+        schema: mockSchema,
+        metadata: {},
+      }),
+    });
+
+    // Load form2 data
+    fetchStub.onCall(2).resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    const form = element.shadowRoot.querySelector('form');
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+    await waitUntil(() => !element.loading && element.fbmsFormFname === 'form2');
+
+    expect(element.formCompleted).to.be.false;
+    expect(element.shadowRoot.querySelector('form')).to.exist;
+
+    // Now submit form2 without forward -> should complete
+    fetchStub.reset();
+    element.formData = { name: 'Jane Doe' };
+    element.hasChanges = true;
+
+    fetchStub.resolves({
+      ok: true,
+      json: async () => ({ messages: ['All forms completed!'] }),
+      headers: new Headers(), // No forward header
+    });
+
+    const form2 = element.shadowRoot.querySelector('form');
+    setTimeout(() => {
+      form2.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    await oneEvent(element, 'form-submit-success');
+    await element.updateComplete;
+
+    expect(element.formCompleted).to.be.true;
+    expect(element.shadowRoot.querySelector('form')).to.not.exist;
+    expect(element.shadowRoot.textContent).to.include('All forms completed!');
   });
 });

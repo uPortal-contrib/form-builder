@@ -34,6 +34,7 @@ class FormBuilder extends LitElement {
     initialFormData: { type: Object, state: true },
     hasChanges: { type: Boolean, state: true },
     submissionStatus: { type: Object, state: true },
+    formCompleted: { type: Boolean, state: true },
   };
 
   static styles = css`
@@ -356,6 +357,7 @@ class FormBuilder extends LitElement {
     this.initialFormData = {};
     this.hasChanges = false;
     this.submissionStatus = null;
+    this.formCompleted = false;
   }
 
   async connectedCallback() {
@@ -919,7 +921,7 @@ class FormBuilder extends LitElement {
         throw new Error(errorMessage);
       }
 
-      // Check for form forwarding header
+      // Check for form forwarding header (safely handle missing headers object)
       const formForward = response.headers?.get ? response.headers.get('x-fbms-formforward') : null;
       if (formForward) {
         console.warn(`Form submitted successfully. Forwarding to next form: ${formForward}`);
@@ -945,6 +947,8 @@ class FormBuilder extends LitElement {
         })
       );
 
+      // No form forward - this is the final form completion
+      this.formCompleted = true; // ADD THIS LINE
       this.submitSuccess = true;
       this.error = null;
       this.initialFormData = this.deepClone(this.formData);
@@ -1286,6 +1290,31 @@ class FormBuilder extends LitElement {
       `;
     }
 
+    // NEW: Success-only view when form is completed
+    if (this.formCompleted) {
+      return html`
+        ${this.customStyles
+          ? html`<style>
+              ${this.customStyles}
+            </style>`
+          : ''}
+
+        <div class="container">
+          <div class="status-message success">
+            <h3>✓ Form Submitted Successfully!</h3>
+            ${this.submissionStatus?.messages?.length > 0
+              ? html`
+                  <ul>
+                    ${this.submissionStatus.messages.map((msg) => html`<li>${msg}</li>`)}
+                  </ul>
+                `
+              : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // Regular form view (rest of existing render code)
     return html`
       ${this.customStyles
         ? html`<style>
@@ -1297,17 +1326,10 @@ class FormBuilder extends LitElement {
         <form @submit="${this.handleSubmit}" class="${this.submitting ? 'submitting' : ''}">
           ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
           ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
-          ${this.submitSuccess
+          ${this.validationFailed
             ? html`
-                <div class="status-message success">
-                  ✓ Form submitted successfully!
-                  ${this.submissionStatus?.messages?.length > 0
-                    ? html`
-                        <ul>
-                          ${this.submissionStatus.messages.map((msg) => html`<li>${msg}</li>`)}
-                        </ul>
-                      `
-                    : ''}
+                <div class="status-message validation-error">
+                  ⚠ Please correct the errors below before submitting.
                 </div>
               `
             : ''}
@@ -1322,13 +1344,6 @@ class FormBuilder extends LitElement {
                         </ul>
                       `
                     : ''}
-                </div>
-              `
-            : ''}
-          ${this.validationFailed
-            ? html`
-                <div class="status-message validation-error">
-                  ⚠ Please correct the errors below before submitting.
                 </div>
               `
             : ''}
