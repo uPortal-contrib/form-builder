@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Feature
 
+    - Re-introduced support for nested form groups
+    - Re-introduced support for form forwarding
+    - Added submit retry on stale auth token
+
+### Fix
+
+    - Corrected several rendering regressions
+    - Several more edge cases covered
+
+## [2.0.0][] - 2025-12-12
+
+### Feature
+
     - Migrate to lit (#91)
     - Add gradle for local webjar (#90)
 
