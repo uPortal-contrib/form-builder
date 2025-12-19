@@ -35,6 +35,7 @@ class FormBuilder extends LitElement {
     hasChanges: { type: Boolean, state: true },
     submissionStatus: { type: Object, state: true },
     formCompleted: { type: Boolean, state: true },
+    submissionError: { type: String, state: true },
   };
 
   static styles = css`
@@ -358,6 +359,7 @@ class FormBuilder extends LitElement {
     this.hasChanges = false;
     this.submissionStatus = null;
     this.formCompleted = false;
+    this.submissionError = null;
   }
 
   async connectedCallback() {
@@ -549,6 +551,7 @@ class FormBuilder extends LitElement {
     // Clear status messages when user makes changes
     this.submitSuccess = false;
     this.validationFailed = false;
+    this.submissionError = null;
 
     // Check if form data has changed from initial state
     this.hasChanges = !this.deepEqual(this.formData, this.initialFormData);
@@ -845,7 +848,7 @@ class FormBuilder extends LitElement {
       if (!isRetry) {
         this.submitting = true;
       }
-      this.error = null;
+      this.submissionError = null;
       this.submissionStatus = null; // Clear previous messages
 
       const body = {
@@ -950,7 +953,7 @@ class FormBuilder extends LitElement {
       // No form forward - this is the final form completion
       this.formCompleted = true;
       this.submitSuccess = true;
-      this.error = null;
+      this.submissionError = null;
       this.initialFormData = this.deepClone(this.formData);
       this.hasChanges = false;
 
@@ -962,7 +965,7 @@ class FormBuilder extends LitElement {
         successMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     } catch (err) {
-      this.error = err.message || 'Failed to submit form';
+      this.submissionError = err.message || 'Failed to submit form';
 
       this.dispatchEvent(
         new CustomEvent('form-submit-error', {
@@ -974,9 +977,7 @@ class FormBuilder extends LitElement {
 
       // Scroll to error message at top of form
       await this.updateComplete;
-      const errorMsg =
-        this.shadowRoot.querySelector('.status-message.error') ||
-        this.shadowRoot.querySelector('.error');
+      const errorMsg = this.shadowRoot.querySelector('.status-message.error');
       if (errorMsg) {
         errorMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
@@ -1342,10 +1343,10 @@ class FormBuilder extends LitElement {
                 </div>
               `
             : ''}
-          ${this.error
+          ${this.submissionError
             ? html`
                 <div class="status-message error">
-                  <strong>Error:</strong> ${this.error}
+                  <strong>Error:</strong> ${this.submissionError}
                   ${this.submissionStatus?.messages?.length > 0
                     ? html`
                         <ul>

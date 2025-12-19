@@ -481,7 +481,7 @@ describe('FormBuilder', () => {
       const { detail } = await oneEvent(element, 'form-submit-error');
 
       expect(detail.error).to.include('Failed to submit form');
-      expect(element.error).to.exist;
+      expect(element.submissionError).to.exist;
     });
 
     it('should include auth token in submission if provided', async () => {
@@ -716,7 +716,7 @@ describe('FormBuilder', () => {
 
       expect(detail.error).to.include('Access denied even after token refresh');
       expect(detail.error).to.include('may not have permission');
-      expect(element.error).to.exist;
+      expect(element.submissionError).to.exist;
     });
 
     it('should show generic error on 403 when oidcUrl is not configured', async () => {
@@ -2228,7 +2228,7 @@ describe('Server Response Messages', () => {
     await element.updateComplete;
 
     // Just verify the state is set correctly
-    expect(element.error).to.equal('Submission Failed');
+    expect(element.submissionError).to.equal('Submission Failed');
     expect(element.submissionStatus).to.exist;
     expect(element.submissionStatus.messageHeader).to.equal('Submission Failed');
     expect(element.submissionStatus.messages).to.have.lengthOf(2);
@@ -2292,7 +2292,7 @@ describe('Server Response Messages', () => {
     await oneEvent(element, 'form-submit-error');
     await element.updateComplete;
 
-    expect(element.error).to.include('Failed to submit form');
+    expect(element.submissionError).to.include('Failed to submit form');
   });
 
   it('should use server messageHeader for error display', async () => {
@@ -2316,7 +2316,7 @@ describe('Server Response Messages', () => {
 
     await oneEvent(element, 'form-submit-error');
 
-    expect(element.error).to.equal('Validation Error');
+    expect(element.submissionError).to.equal('Validation Error');
   });
 });
 
@@ -2988,7 +2988,7 @@ describe('Scroll Behavior', () => {
       await element.updateComplete;
 
       // Verify error message exists and is displayed
-      expect(element.error).to.exist;
+      expect(element.submissionError).to.exist;
 
       // The error is displayed in the top-level .error div
       // (the early return in render() shows this view when this.error is set)
@@ -3018,7 +3018,7 @@ describe('Scroll Behavior', () => {
       await element.updateComplete;
 
       // Verify the error state is set correctly
-      expect(element.error).to.equal('Validation Failed');
+      expect(element.submissionError).to.equal('Validation Failed');
 
       // The error is displayed in the top-level .error div
       const errorMsg = element.shadowRoot.querySelector('.error');
