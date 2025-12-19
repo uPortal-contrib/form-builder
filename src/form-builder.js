@@ -823,10 +823,10 @@ class FormBuilder extends LitElement {
       this.validationFailed = true;
       await this.updateComplete; // Wait for render to complete
 
-      // Scroll to first error
-      const firstError = this.shadowRoot.querySelector('.error-message');
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Scroll to validation warning banner at top of form
+      const validationWarning = this.shadowRoot.querySelector('.status-message.validation-error');
+      if (validationWarning) {
+        validationWarning.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
       return;
     }
@@ -948,7 +948,7 @@ class FormBuilder extends LitElement {
       );
 
       // No form forward - this is the final form completion
-      this.formCompleted = true; // ADD THIS LINE
+      this.formCompleted = true;
       this.submitSuccess = true;
       this.error = null;
       this.initialFormData = this.deepClone(this.formData);
@@ -959,7 +959,7 @@ class FormBuilder extends LitElement {
       // Scroll to success message
       const successMsg = this.shadowRoot.querySelector('.status-message.success');
       if (successMsg) {
-        successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        successMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     } catch (err) {
       this.error = err.message || 'Failed to submit form';
@@ -971,6 +971,15 @@ class FormBuilder extends LitElement {
           composed: true,
         })
       );
+
+      // Scroll to error message at top of form
+      await this.updateComplete;
+      const errorMsg =
+        this.shadowRoot.querySelector('.status-message.error') ||
+        this.shadowRoot.querySelector('.error');
+      if (errorMsg) {
+        errorMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     } finally {
       this.submitting = false;
     }

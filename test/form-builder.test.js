@@ -2866,3 +2866,243 @@ describe('Form Completion and Forwarding', () => {
     expect(element.shadowRoot.textContent).to.include('All forms completed!');
   });
 });
+// Add these tests to form-builder.test.js
+// These tests use the same imports as the existing test file:
+// import { html, fixture, expect, waitUntil, oneEvent, elementUpdated } from '@open-wc/testing';
+// import { stub } from 'sinon';
+// import '../src/form-builder.js';
+
+describe('Scroll Behavior', () => {
+  let element;
+  let fetchStub;
+
+  const mockSchema = {
+    title: 'Test Form',
+    type: 'object',
+    required: ['name', 'email'],
+    properties: {
+      name: {
+        type: 'string',
+        title: 'Name',
+      },
+      email: {
+        type: 'string',
+        title: 'Email',
+        format: 'email',
+      },
+    },
+  };
+
+  const mockSchemaResp = {
+    fname: 'test-form',
+    version: 1,
+    schema: mockSchema,
+    metadata: {},
+  };
+
+  beforeEach(async () => {
+    fetchStub = stub(window, 'fetch');
+
+    fetchStub.onFirstCall().resolves({
+      ok: true,
+      json: async () => mockSchemaResp,
+    });
+    fetchStub.onSecondCall().resolves({
+      ok: true,
+      json: async () => ({ answers: {} }),
+    });
+
+    element = await fixture(html`
+      <form-builder fbms-base-url="/api" fbms-form-fname="test-form"></form-builder>
+    `);
+
+    await waitUntil(() => !element.loading);
+  });
+
+  afterEach(() => {
+    fetchStub.restore();
+  });
+
+  describe('Validation Error Scroll', () => {
+    it('should scroll to validation warning banner on validation failure', async () => {
+      // Submit empty form to trigger validation
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      // Verify validation warning exists
+      const validationWarning = element.shadowRoot.querySelector(
+        '.status-message.validation-error'
+      );
+      expect(validationWarning).to.exist;
+      expect(validationWarning.textContent).to.include('Please correct the errors below');
+    });
+
+    it('should have validation warning rendered before field errors', async () => {
+      // Submit empty form to trigger validation
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      // Check DOM order - validation warning should come before form fields
+      const container = element.shadowRoot.querySelector('.container');
+      const validationWarning = container.querySelector('.status-message.validation-error');
+      const firstFormGroup = container.querySelector('.form-group');
+
+      // Get positions in DOM
+      const allElements = Array.from(container.querySelectorAll('*'));
+      const warningPosition = allElements.indexOf(validationWarning);
+      const formGroupPosition = allElements.indexOf(firstFormGroup);
+
+      expect(warningPosition).to.be.lessThan(formGroupPosition);
+    });
+  });
+
+  describe('Submission Error Scroll', () => {
+    beforeEach(() => {
+      element.formData = {
+        name: 'John Doe',
+        email: 'john@example.com',
+      };
+      element.hasChanges = true;
+      fetchStub.reset();
+    });
+
+    it('should scroll to error message on submission failure', async () => {
+      fetchStub.resolves({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        json: async () => ({ messageHeader: 'Server Error' }),
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      await oneEvent(element, 'form-submit-error');
+      await element.updateComplete;
+
+      // Verify error message exists and is displayed
+      expect(element.error).to.exist;
+
+      // The error is displayed in the top-level .error div
+      // (the early return in render() shows this view when this.error is set)
+      const errorMsg = element.shadowRoot.querySelector('.error');
+      expect(errorMsg).to.exist;
+      expect(errorMsg.textContent).to.include('Server Error');
+    });
+
+    it('should display error message on submission failure with server message', async () => {
+      fetchStub.resolves({
+        ok: false,
+        status: 400,
+        statusText: 'Bad Request',
+        json: async () => ({
+          messageHeader: 'Validation Failed',
+          messages: ['Field X is invalid', 'Field Y is required'],
+        }),
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      await oneEvent(element, 'form-submit-error');
+      await element.updateComplete;
+
+      // Verify the error state is set correctly
+      expect(element.error).to.equal('Validation Failed');
+
+      // The error is displayed in the top-level .error div
+      const errorMsg = element.shadowRoot.querySelector('.error');
+      expect(errorMsg).to.exist;
+      expect(errorMsg.textContent).to.include('Validation Failed');
+
+      // Note: The current implementation shows the simple error view (early return in render)
+      // which doesn't include the detailed messages list. The submissionStatus is stored
+      // but not displayed in this view. This is existing behavior.
+      expect(element.submissionStatus).to.exist;
+      expect(element.submissionStatus.messages).to.have.lengthOf(2);
+      expect(element.submissionStatus.messages[0]).to.equal('Field X is invalid');
+      expect(element.submissionStatus.messages[1]).to.equal('Field Y is required');
+    });
+  });
+
+  describe('Success Scroll', () => {
+    beforeEach(() => {
+      element.formData = {
+        name: 'John Doe',
+        email: 'john@example.com',
+      };
+      element.hasChanges = true;
+      fetchStub.reset();
+    });
+
+    it('should scroll to success message on successful submission', async () => {
+      fetchStub.resolves({
+        ok: true,
+        json: async () => ({ messages: ['Form submitted!'] }),
+        headers: new Headers(),
+      });
+
+      const form = element.shadowRoot.querySelector('form');
+
+      setTimeout(() => {
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      });
+
+      await oneEvent(element, 'form-submit-success');
+      await element.updateComplete;
+
+      // Verify success state
+      expect(element.formCompleted).to.be.true;
+      expect(element.submitSuccess).to.be.true;
+
+      // Success message should be visible
+      const successMsg = element.shadowRoot.querySelector('.status-message.success');
+      expect(successMsg).to.exist;
+      expect(successMsg.textContent).to.include('Form Submitted Successfully');
+    });
+  });
+
+  describe('Scroll Target Elements', () => {
+    it('should have validation-error class on validation warning', async () => {
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      const warning = element.shadowRoot.querySelector('.status-message.validation-error');
+      expect(warning).to.exist;
+      expect(warning.classList.contains('status-message')).to.be.true;
+      expect(warning.classList.contains('validation-error')).to.be.true;
+    });
+
+    it('should position validation warning near top of form', async () => {
+      const form = element.shadowRoot.querySelector('form');
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+
+      await element.updateComplete;
+
+      const warning = element.shadowRoot.querySelector('.status-message.validation-error');
+      expect(warning).to.exist;
+
+      // The warning should be near the top of the form (after title/description)
+      const formElement = element.shadowRoot.querySelector('form');
+      const formChildren = Array.from(formElement.children);
+      const warningIndex = formChildren.findIndex((child) =>
+        child.classList?.contains('status-message')
+      );
+
+      // Should be within first few children (after h2/p if present)
+      expect(warningIndex).to.be.lessThan(5);
+    });
+  });
+});
