@@ -33,6 +33,9 @@ class FormBuilder extends LitElement {
     validationFailed: { type: Boolean, state: true },
     initialFormData: { type: Object, state: true },
     hasChanges: { type: Boolean, state: true },
+    submissionStatus: { type: Object, state: true },
+    formCompleted: { type: Boolean, state: true },
+    submissionError: { type: String, state: true },
   };
 
   static styles = css`
@@ -288,6 +291,15 @@ class FormBuilder extends LitElement {
       color: #721c24;
     }
 
+    .status-message ul {
+      margin: 8px 0 0 0;
+      padding-left: 20px;
+    }
+
+    .status-message li {
+      margin: 4px 0;
+    }
+
     form.submitting input,
     form.submitting textarea,
     form.submitting select,
@@ -295,6 +307,21 @@ class FormBuilder extends LitElement {
       opacity: 0.6;
       pointer-events: none;
       cursor: not-allowed;
+    }
+
+    .info-only {
+      padding: 20px 0;
+    }
+
+    .info-only p {
+      line-height: 1.6;
+      color: #333;
+    }
+
+    .info-label {
+      font-weight: 500;
+      color: #333;
+      display: block;
     }
   `;
 
@@ -308,6 +335,26 @@ class FormBuilder extends LitElement {
     this._formData = value;
     this.requestUpdate('formData', oldValue);
     this.updateStateFlags();
+  }
+
+  /**
+   * Get custom error message from schema if available
+   * Follows the pattern: schema.properties.fieldName.messages.ruleName
+   * For nested fields: schema.properties.parent.properties.child.messages.ruleName
+   * Returns null if field, messages, or rule doesn't exist
+   */
+  getCustomErrorMessage(fieldPath, ruleName) {
+    const pathParts = fieldPath.split('.');
+    let current = this.schema;
+
+    // Navigate to the field schema
+    for (const part of pathParts) {
+      current = current?.properties?.[part];
+      if (!current) return null;
+    }
+
+    // Check for custom message
+    return current?.messages?.[ruleName] ?? null;
   }
 
   constructor() {
@@ -326,6 +373,9 @@ class FormBuilder extends LitElement {
     this.validationFailed = false;
     this.initialFormData = {};
     this.hasChanges = false;
+    this.submissionStatus = null;
+    this.formCompleted = false;
+    this.submissionError = null;
   }
 
   async connectedCallback() {
@@ -517,6 +567,7 @@ class FormBuilder extends LitElement {
     // Clear status messages when user makes changes
     this.submitSuccess = false;
     this.validationFailed = false;
+    this.submissionError = null;
 
     // Check if form data has changed from initial state
     this.hasChanges = !this.deepEqual(this.formData, this.initialFormData);
@@ -697,7 +748,8 @@ class FormBuilder extends LitElement {
       const fieldPath = basePath ? `${basePath}.${fieldName}` : fieldName;
       const value = this.getNestedValue(fieldPath);
       if (value === undefined || value === null || value === '') {
-        errors[fieldPath] = 'This field is required';
+        const customMsg = this.getCustomErrorMessage(fieldPath, 'required');
+        errors[fieldPath] = customMsg || 'This field is required';
       }
     });
 
@@ -723,7 +775,11 @@ class FormBuilder extends LitElement {
         if (fieldSchema.format === 'email') {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(value)) {
-            errors[fieldPath] = 'Invalid email address';
+            // Support both 'format' (generic) and 'email' (specific) custom message keys
+            const customMsg =
+              this.getCustomErrorMessage(fieldPath, 'format') ||
+              this.getCustomErrorMessage(fieldPath, 'email');
+            errors[fieldPath] = customMsg || 'Invalid email address';
           }
         }
 
@@ -731,7 +787,8 @@ class FormBuilder extends LitElement {
         if (fieldSchema.pattern) {
           const regex = new RegExp(fieldSchema.pattern);
           if (!regex.test(value)) {
-            errors[fieldPath] = fieldSchema.patternErrorMessage || 'Invalid format';
+            const customMsg = this.getCustomErrorMessage(fieldPath, 'pattern');
+            errors[fieldPath] = customMsg || 'Invalid format';
           }
         }
 
@@ -739,13 +796,16 @@ class FormBuilder extends LitElement {
         if (fieldSchema.type === 'number' || fieldSchema.type === 'integer') {
           const num = Number(value);
           if (isNaN(num)) {
-            errors[fieldPath] = 'Must be a number';
+            const customMsg = this.getCustomErrorMessage(fieldPath, 'type');
+            errors[fieldPath] = customMsg || 'Must be a number';
           } else {
             if (fieldSchema.minimum !== undefined && num < fieldSchema.minimum) {
-              errors[fieldPath] = `Must be at least ${fieldSchema.minimum}`;
+              const customMsg = this.getCustomErrorMessage(fieldPath, 'minimum');
+              errors[fieldPath] = customMsg || `Must be at least ${fieldSchema.minimum}`;
             }
             if (fieldSchema.maximum !== undefined && num > fieldSchema.maximum) {
-              errors[fieldPath] = `Must be at most ${fieldSchema.maximum}`;
+              const customMsg = this.getCustomErrorMessage(fieldPath, 'maximum');
+              errors[fieldPath] = customMsg || `Must be at most ${fieldSchema.maximum}`;
             }
           }
         }
@@ -753,10 +813,12 @@ class FormBuilder extends LitElement {
         // String length validation
         if (fieldSchema.type === 'string') {
           if (fieldSchema.minLength && value.length < fieldSchema.minLength) {
-            errors[fieldPath] = `Must be at least ${fieldSchema.minLength} characters`;
+            const customMsg = this.getCustomErrorMessage(fieldPath, 'minLength');
+            errors[fieldPath] = customMsg || `Must be at least ${fieldSchema.minLength} characters`;
           }
           if (fieldSchema.maxLength && value.length > fieldSchema.maxLength) {
-            errors[fieldPath] = `Must be at most ${fieldSchema.maxLength} characters`;
+            const customMsg = this.getCustomErrorMessage(fieldPath, 'maxLength');
+            errors[fieldPath] = customMsg || `Must be at most ${fieldSchema.maxLength} characters`;
           }
         }
       }
@@ -781,10 +843,10 @@ class FormBuilder extends LitElement {
       this.validationFailed = true;
       await this.updateComplete; // Wait for render to complete
 
-      // Scroll to first error
-      const firstError = this.shadowRoot.querySelector('.error-message');
-      if (firstError) {
-        firstError.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Scroll to validation warning banner at top of form
+      const validationWarning = this.shadowRoot.querySelector('.status-message.validation-error');
+      if (validationWarning) {
+        validationWarning.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
       return;
     }
@@ -803,7 +865,8 @@ class FormBuilder extends LitElement {
       if (!isRetry) {
         this.submitting = true;
       }
-      this.error = null;
+      this.submissionError = null;
+      this.submissionStatus = null; // Clear previous messages
 
       const body = {
         username: this.decoded.sub,
@@ -828,6 +891,16 @@ class FormBuilder extends LitElement {
         headers,
         body: JSON.stringify(body),
       });
+
+      // Try to parse response body for messages (even on error)
+      let responseData = null;
+      try {
+        responseData = await response.json();
+        this.submissionStatus = responseData;
+      } catch (jsonErr) {
+        // Response might not be JSON
+        console.warn('Could not parse response as JSON:', jsonErr);
+      }
 
       // Handle 403 - token may be stale
       if (response.status === 403 && !isRetry) {
@@ -859,7 +932,39 @@ class FormBuilder extends LitElement {
             'Authorization failed: Access denied even after token refresh. You may not have permission to submit this form.'
           );
         }
-        throw new Error(`Failed to submit form: ${response.statusText}`);
+
+        // Use server error message if available
+        const errorMessage =
+          responseData?.messageHeader ||
+          responseData?.message ||
+          `Failed to submit form: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+
+      // Check for form forwarding header (safely handle missing headers object)
+      const formForward = response.headers?.get ? response.headers.get('x-fbms-formforward') : null;
+      if (formForward) {
+        // eslint-disable-next-line no-console
+        console.info(`Form submitted successfully. Forwarding to next form: ${formForward}`);
+        this.fbmsFormFname = formForward;
+
+        // Keep success state and messages visible for the forwarded form
+        this.submitSuccess = true;
+        // Note: submissionStatus is preserved to show server messages on the next form
+        this.formCompleted = false;
+
+        // Re-initialize with the new form
+        this.loading = true;
+        try {
+          await this.initialize();
+          return; // Exit early, don't show success message for intermediate form
+          // Note: finally block will set submitting = false
+        } catch (forwardingError) {
+          console.error('Failed to load forwarded form:', forwardingError);
+          this.loading = false;
+          this.submissionError =
+            forwardingError?.message || 'Form was submitted, but loading the next form failed.';
+        }
       }
 
       // Dispatch success event
@@ -871,20 +976,22 @@ class FormBuilder extends LitElement {
         })
       );
 
+      // No form forward - this is the final form completion
+      this.formCompleted = true;
       this.submitSuccess = true;
-      this.error = null;
-      this.initialFormData = this.deepClone(this.formData); // Use deepClone
+      this.submissionError = null;
+      this.initialFormData = this.deepClone(this.formData);
       this.hasChanges = false;
 
-      await this.updateComplete; // Wait for render to complete
+      await this.updateComplete;
 
       // Scroll to success message
       const successMsg = this.shadowRoot.querySelector('.status-message.success');
       if (successMsg) {
-        successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        successMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
     } catch (err) {
-      this.error = err.message || 'Failed to submit form';
+      this.submissionError = err.message || 'Failed to submit form';
 
       this.dispatchEvent(
         new CustomEvent('form-submit-error', {
@@ -893,6 +1000,13 @@ class FormBuilder extends LitElement {
           composed: true,
         })
       );
+
+      // Scroll to error message at top of form
+      await this.updateComplete;
+      const errorMsg = this.shadowRoot.querySelector('.status-message.error');
+      if (errorMsg) {
+        errorMsg.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
     } finally {
       this.submitting = false;
     }
@@ -919,6 +1033,18 @@ class FormBuilder extends LitElement {
     // Handle nested objects with properties
     if (fieldSchema.type === 'object' && fieldSchema.properties) {
       return this.renderNestedObject(fieldName, fieldSchema, basePath, depth);
+    }
+
+    // Single-value enum - render as informational text only (title serves as the message)
+    if (fieldSchema.enum && fieldSchema.enum.length === 1) {
+      return html`
+        <div class="form-group">
+          <span class="info-label">${fieldSchema.title || fieldName}</span>
+          ${fieldSchema.description
+            ? html`<span class="description">${fieldSchema.description}</span>`
+            : ''}
+        </div>
+      `;
     }
 
     // Regular field
@@ -980,6 +1106,11 @@ class FormBuilder extends LitElement {
     const { type, enum: enumValues, format, items } = fieldSchema;
     const widget = uiOptions['ui:widget'];
     const isInline = uiOptions['ui:options']?.inline;
+
+    // Single-value enum - no input needed, title/label already displays the message
+    if (enumValues && enumValues.length === 1) {
+      return html``;
+    }
 
     // Array of enums with checkboxes widget - render as checkboxes
     if (type === 'array' && items?.enum && widget === 'checkboxes') {
@@ -1212,6 +1343,33 @@ class FormBuilder extends LitElement {
       `;
     }
 
+    // NEW: Success-only view when form is completed
+    if (this.formCompleted) {
+      return html`
+        ${this.customStyles
+          ? html`<style>
+              ${this.customStyles}
+            </style>`
+          : ''}
+
+        <div class="container">
+          <div class="status-message success">
+            <h2>✓ Form submitted successfully!</h2>
+            ${this.submissionStatus?.messages?.length > 0
+              ? html`
+                  <ul>
+                    ${this.submissionStatus.messages.map((msg) => html`<li>${msg}</li>`)}
+                  </ul>
+                `
+              : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    // Regular form view (rest of existing render code)
+    const hasFields = Object.keys(this.schema.properties).length > 0;
+
     return html`
       ${this.customStyles
         ? html`<style>
@@ -1220,35 +1378,71 @@ class FormBuilder extends LitElement {
         : ''}
 
       <div class="container">
-        <form @submit="${this.handleSubmit}" class="${this.submitting ? 'submitting' : ''}">
-          ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
-          ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
-          ${this.submitSuccess
-            ? html` <div class="status-message success">✓ Form submitted successfully!</div> `
-            : ''}
-          ${this.validationFailed
-            ? html`
-                <div class="status-message validation-error">
-                  ⚠ Please correct the errors below before submitting.
-                </div>
-              `
-            : ''}
-          ${Object.entries(this.schema.properties).map(([fieldName, fieldSchema]) =>
-            this.renderField(fieldName, fieldSchema)
-          )}
+        ${this.submitSuccess
+          ? html`
+              <div class="status-message success">
+                ✓ Your form was successfully submitted.
+                ${this.submissionStatus?.messages?.length > 0
+                  ? html`
+                      <ul>
+                        ${this.submissionStatus.messages.map((msg) => html`<li>${msg}</li>`)}
+                      </ul>
+                    `
+                  : ''}
+              </div>
+            `
+          : ''}
+        ${hasFields
+          ? html`
+              <form @submit="${this.handleSubmit}" class="${this.submitting ? 'submitting' : ''}">
+                ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
+                ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
+                ${this.validationFailed
+                  ? html`
+                      <div class="status-message validation-error">
+                        ⚠ Please correct the errors below before submitting.
+                      </div>
+                    `
+                  : ''}
+                ${this.submissionError
+                  ? html`
+                      <div class="status-message error">
+                        <strong>Error:</strong> ${this.submissionError}
+                        ${this.submissionStatus?.messages?.length > 0
+                          ? html`
+                              <ul>
+                                ${this.submissionStatus.messages.map(
+                                  (msg) => html`<li>${msg}</li>`
+                                )}
+                              </ul>
+                            `
+                          : ''}
+                      </div>
+                    `
+                  : ''}
+                ${Object.entries(this.schema.properties).map(([fieldName, fieldSchema]) =>
+                  this.renderField(fieldName, fieldSchema)
+                )}
 
-          <div class="buttons">
-            <button type="submit" ?disabled="${this.submitting || !this.hasChanges}">
-              <span class="button-content">
-                ${this.submitting ? html`<span class="spinner"></span>` : ''}
-                ${this.submitting ? 'Submitting...' : 'Submit'}
-              </span>
-            </button>
-            <button type="button" @click="${this.handleReset}" ?disabled="${this.submitting}">
-              Reset
-            </button>
-          </div>
-        </form>
+                <div class="buttons">
+                  <button type="submit" ?disabled="${this.submitting || !this.hasChanges}">
+                    <span class="button-content">
+                      ${this.submitting ? html`<span class="spinner"></span>` : ''}
+                      ${this.submitting ? 'Submitting...' : 'Submit'}
+                    </span>
+                  </button>
+                  <button type="button" @click="${this.handleReset}" ?disabled="${this.submitting}">
+                    Reset
+                  </button>
+                </div>
+              </form>
+            `
+          : html`
+              <div class="info-only">
+                ${this.schema.title ? html`<h2>${this.schema.title}</h2>` : ''}
+                ${this.schema.description ? html`<p>${this.schema.description}</p>` : ''}
+              </div>
+            `}
       </div>
     `;
   }
