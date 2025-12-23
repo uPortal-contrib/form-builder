@@ -405,16 +405,7 @@ describe('FormBuilder', () => {
         name: 'John Doe',
         email: 'john@example.com',
       };
-
-      // Simulate actual user input to trigger hasChanges
       await elementUpdated(element);
-      const nameInput = element.shadowRoot.querySelector('#name');
-      nameInput.value = 'John Doe';
-      nameInput.dispatchEvent(new Event('input', { bubbles: true }));
-      await element.updateComplete;
-
-      // Verify hasChanges is true
-      expect(element.hasChanges).to.be.true;
 
       let resolveSubmit;
       fetchStub.returns(
@@ -439,7 +430,12 @@ describe('FormBuilder', () => {
       resolveSubmit({ ok: true, json: async () => ({}) });
       await waitUntil(() => !element.submitting);
 
-      expect(submitButton.disabled).to.be.true; // Still disabled because no new changes
+      // After successful submission, form is replaced with success view
+      expect(element.formCompleted).to.be.true;
+
+      // After successful submission, form is replaced with success view (no submit button)
+      const submitButtonAfter = element.shadowRoot.querySelector('button[type="submit"]');
+      expect(submitButtonAfter).to.not.exist;
     });
 
     it('should prevent double submission', async () => {
@@ -3124,7 +3120,6 @@ describe('Scroll Behavior', () => {
         name: 'John Doe',
         email: 'john@example.com',
       };
-      element.hasChanges = true;
       fetchStub.reset();
     });
 
