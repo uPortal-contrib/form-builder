@@ -1,6 +1,6 @@
 {
   "name": "@uportal/form-builder",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Create html input forms on the fly using Lit",
   "main": "dist/form-builder.js",
   "module": "dist/form-builder.js",
