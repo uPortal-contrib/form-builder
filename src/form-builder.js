@@ -1425,7 +1425,7 @@ class FormBuilder extends LitElement {
                 )}
 
                 <div class="buttons">
-                  <button type="submit" ?disabled="${this.submitting || !this.hasChanges}">
+                  <button type="submit" ?disabled="${this.submitting}">
                     <span class="button-content">
                       ${this.submitting ? html`<span class="spinner"></span>` : ''}
                       ${this.submitting ? 'Submitting...' : 'Submit'}
